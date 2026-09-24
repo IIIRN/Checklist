@@ -4,10 +4,11 @@ import type { ChecklistEntry } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
-  Clock, MapPin, Zap, User, Pencil, LogOut, Trash2,
+  Clock, MapPin, Zap, User, Pencil, Trash2,
   HardHat, CheckCircle2, XCircle, AlertTriangle, Shield,
 } from 'lucide-react'
 import Link from 'next/link'
+import { getContractorAlcRisk } from '@/lib/types'
 
 /* ── PPE compact ── */
 const PPEStrip = ({ entry }: { entry: ChecklistEntry }) => {
@@ -43,10 +44,9 @@ interface ChecklistCardsProps {
   entries: ChecklistEntry[]
   loading: boolean
   onDelete: (id: string) => void
-  onCheckout: (id: string) => void
 }
 
-export function ChecklistCards({ entries, loading, onDelete, onCheckout }: ChecklistCardsProps) {
+export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsProps) {
 
   if (loading) {
     return (
@@ -83,12 +83,6 @@ export function ChecklistCards({ entries, loading, onDelete, onCheckout }: Check
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {entries.map((e, idx) => {
-        const statusMap = {
-          active:      { label: 'อยู่ในโครงการ', cls: 'badge-active', stripe: 'hsl(142 72% 29%)' },
-          checked_out: { label: 'ออกแล้ว',        cls: 'badge-out',    stripe: 'hsl(var(--c-info))' },
-          cancelled:   { label: 'ยกเลิก',         cls: 'badge-cancel', stripe: 'hsl(var(--c-border-2))' },
-        }
-        const st = statusMap[e.status] ?? statusMap.active
         const hasDanger = e.is_blacklisted
         const hasWarn   = e.alc_result === '>0%' && !hasDanger
 
@@ -98,7 +92,7 @@ export function ChecklistCards({ entries, loading, onDelete, onCheckout }: Check
             style={{ animationDelay: `${idx * 30}ms` }}>
 
             {/* Top stripe */}
-            <div style={{ height: 3, background: hasDanger ? 'hsl(0 72% 50%)' : st.stripe }} />
+            <div style={{ height: 3, background: hasDanger ? 'hsl(0 72% 50%)' : 'hsl(var(--c-brand))' }} />
 
             <div style={{ padding: '12px 14px' }}>
 
@@ -116,7 +110,15 @@ export function ChecklistCards({ entries, loading, onDelete, onCheckout }: Check
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <p style={{ fontSize: 13, fontWeight: 800, color: 'hsl(var(--c-fg))', lineHeight: 1.2 }}>
+                    <p style={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: 'hsl(var(--c-fg))',
+                      lineHeight: 1.2,
+                      background: (getContractorAlcRisk(e.contractors) || e.notes?.includes('[เสี่ยง ALC]') || e.purpose?.includes('[เสี่ยง ALC]')) ? '#fef3c7' : undefined,
+                      padding: (getContractorAlcRisk(e.contractors) || e.notes?.includes('[เสี่ยง ALC]') || e.purpose?.includes('[เสี่ยง ALC]')) ? '1px 6px' : undefined,
+                      borderRadius: (getContractorAlcRisk(e.contractors) || e.notes?.includes('[เสี่ยง ALC]') || e.purpose?.includes('[เสี่ยง ALC]')) ? 4 : undefined,
+                    }}>
                       {e.contractor_name}
                     </p>
                     {hasDanger && (
@@ -129,8 +131,6 @@ export function ChecklistCards({ entries, loading, onDelete, onCheckout }: Check
                     {e.company_name ?? '—'}
                   </p>
                 </div>
-
-                <span className={`badge ${st.cls}`}>{st.label}</span>
               </div>
 
               {/* Info rows */}
@@ -144,10 +144,8 @@ export function ChecklistCards({ entries, loading, onDelete, onCheckout }: Check
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'hsl(var(--c-fg-3))' }}>
                   <Clock className="w-3 h-3 shrink-0" style={{ color: 'hsl(var(--c-fg-4))' }} />
-                  เข้า
-                  <span style={{ fontWeight: 700, color: 'hsl(142 72% 29%)' }}>{e.check_in_time ?? '—'}</span>
-                  · ออก
-                  <span style={{ fontWeight: 600, color: 'hsl(var(--c-fg-2))' }}>{e.check_out_time ?? '—'}</span>
+                  เวลาตรวจ:
+                  <span style={{ fontWeight: 700, color: 'hsl(var(--c-fg))' }}>{e.check_in_time ?? '—'}</span>
                 </div>
                 {e.activity_name && (
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11, color: 'hsl(var(--c-fg-3))' }}>
@@ -223,12 +221,6 @@ export function ChecklistCards({ entries, loading, onDelete, onCheckout }: Check
                     <Pencil className="w-3.5 h-3.5" />แก้ไข
                   </button>
                 </Link>
-                {e.status === 'active' && (
-                  <button className="ctrl-btn" onClick={() => onCheckout(e.id)}
-                    style={{ flex: 1, fontSize: 11, color: 'hsl(var(--c-info))', borderColor: 'hsl(var(--c-info-bd))', background: 'hsl(var(--c-info-bg))' }}>
-                    <LogOut className="w-3.5 h-3.5" />Check-out
-                  </button>
-                )}
                 <button className="ctrl-btn ctrl-btn-icon" onClick={() => onDelete(e.id)}
                   style={{ color: 'hsl(var(--c-danger))', borderColor: 'hsl(var(--c-danger-bd))', background: 'hsl(var(--c-danger-bg))' }}>
                   <Trash2 className="w-3.5 h-3.5" />

@@ -2,54 +2,69 @@
 
 import { useState } from 'react'
 import type { ChecklistEntry } from '@/lib/types'
-import { cn } from '@/lib/utils'
 import {
-  CheckCircle2, XCircle, MoreHorizontal, Pencil, LogOut, Trash2,
-  ArrowUp, ArrowDown, ArrowUpDown, HardHat,
+  MoreHorizontal, Pencil, Trash2,
+  ArrowUp, ArrowDown, ArrowUpDown, HardHat, Check, X, CheckCircle2, AlertTriangle
 } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import Link from 'next/link'
+import { getContractorAlcRisk } from '@/lib/types'
 
-/* ── PPE dots ── */
-const PPEDots = ({ entry }: { entry: ChecklistEntry }) => {
+/* ── PPE Compact Dots with Labels ── */
+const PPECompact = ({ entry }: { entry: ChecklistEntry }) => {
   const items = [
-    { k: 'ppe_helmet', v: entry.ppe_helmet },
-    { k: 'ppe_vest',   v: entry.ppe_vest   },
-    { k: 'ppe_shirt',  v: entry.ppe_shirt  },
-    { k: 'ppe_gloves', v: entry.ppe_gloves },
-    { k: 'ppe_shoes',  v: entry.ppe_shoes  },
+    { label: 'หมวก', v: entry.ppe_helmet, icon: '⛑' },
+    { label: 'กั๊ก', v: entry.ppe_vest, icon: '🦺' },
+    { label: 'เสื้อ', v: entry.ppe_shirt, icon: '👕' },
+    { label: 'ถุงมือ', v: entry.ppe_gloves, icon: '🧤' },
+    { label: 'รองเท้า', v: entry.ppe_shoes, icon: '👢' },
   ]
   const pass = items.filter(i => i.v).length
+
   return (
-    <div className="flex items-center gap-1">
-      {items.map(i => (
-        <span key={i.k} style={{
-          width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-          background: i.v ? 'hsl(142 72% 29%)' : 'hsl(var(--c-border-2))',
-        }} />
-      ))}
-      <span style={{
-        fontSize: 10, fontWeight: 700, marginLeft: 3,
-        color: pass === 5 ? 'hsl(142 72% 29%)' : pass >= 3 ? 'hsl(34 90% 38%)' : 'hsl(0 72% 50%)',
-      }}>
+    <div className="flex items-center gap-1.5 justify-center">
+      <div className="flex items-center gap-0.5">
+        {items.map((i, idx) => (
+          <span
+            key={idx}
+            title={`${i.label}: ${i.v ? 'ผ่าน' : 'ไม่ผ่าน'}`}
+            className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold ${
+              i.v
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-300 text-slate-600'
+            }`}
+          >
+            {i.v ? '✓' : '—'}
+          </span>
+        ))}
+      </div>
+      <span
+        className={`text-[10px] font-bold font-mono px-1 rounded border ${
+          pass === 5
+            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+            : pass >= 3
+            ? 'bg-amber-100 text-amber-900 border-amber-300'
+            : 'bg-red-100 text-red-900 border-red-300'
+        }`}
+      >
         {pass}/5
       </span>
     </div>
   )
 }
 
-type SortKey = 'contractor_name' | 'company_name' | 'check_in_time' | 'alc_result'
+type SortKey = 'contractor_name' | 'company_name' | 'check_in_time' | 'alc_result' | 'entry_date'
 
 interface ChecklistTableProps {
   entries: ChecklistEntry[]
   loading: boolean
   onDelete: (id: string) => void
-  onCheckout: (id: string) => void
+  showDate?: boolean
 }
 
-export function ChecklistTable({ entries, loading, onDelete, onCheckout }: ChecklistTableProps) {
+export function ChecklistTable({ entries, loading, onDelete, showDate = false }: ChecklistTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('contractor_name')
   const [asc, setAsc] = useState(true)
 
@@ -65,203 +80,196 @@ export function ChecklistTable({ entries, loading, onDelete, onCheckout }: Check
   })
 
   const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col) return <ArrowUpDown className="w-3 h-3 opacity-30" />
-    return asc ? <ArrowUp className="w-3 h-3" style={{ color: 'hsl(var(--c-brand))' }} />
-               : <ArrowDown className="w-3 h-3" style={{ color: 'hsl(var(--c-brand))' }} />
+    if (sortKey !== col) return <ArrowUpDown className="w-2.5 h-2.5 opacity-30 inline ml-1" />
+    return asc ? <ArrowUp className="w-2.5 h-2.5 text-blue-600 inline ml-1" />
+               : <ArrowDown className="w-2.5 h-2.5 text-blue-600 inline ml-1" />
   }
 
-  const SortTh = ({ col, label }: { col: SortKey; label: string }) => (
-    <th onClick={() => toggleSort(col)} style={{ cursor: 'pointer' }}>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+  const SortTh = ({ col, label, className = '' }: { col: SortKey; label: string; className?: string }) => (
+    <th
+      onClick={() => toggleSort(col)}
+      className={`py-2 px-2.5 border-r border-slate-300 cursor-pointer select-none hover:bg-slate-200/70 transition-colors ${className}`}
+    >
+      <span className="inline-flex items-center gap-1 font-bold">
         {label}<SortIcon col={col} />
       </span>
     </th>
   )
 
-  /* Loading */
   if (loading) return (
-    <div className="card flex-center py-12">
-      <div style={{
-        width: 24, height: 24, borderRadius: '50%',
-        border: '2px solid hsl(var(--c-border))',
-        borderTopColor: 'hsl(var(--c-brand))',
-        animation: 'spin 0.8s linear infinite',
-      }} />
+    <div className="card border border-slate-300 flex items-center justify-center py-12 bg-white">
+      <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+        <div className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-blue-600 animate-spin" />
+        <span>กำลังโหลดข้อมูล...</span>
+      </div>
     </div>
   )
 
-  /* Empty */
   if (!entries.length) return (
-    <div className="card flex-center flex-col py-16 gap-2">
-      <HardHat className="w-10 h-10" style={{ color: 'hsl(var(--c-border-2))' }} />
-      <p style={{ fontSize: 13, fontWeight: 600, color: 'hsl(var(--c-fg-4))' }}>ไม่พบรายการ</p>
-      <p style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))' }}>กด &quot;เพิ่มรายการ&quot; เพื่อเริ่มบันทึก</p>
+    <div className="card border border-slate-300 flex flex-col items-center justify-center py-14 gap-2 bg-white text-center">
+      <HardHat className="w-8 h-8 text-slate-400" />
+      <p className="text-xs font-bold text-slate-800">ไม่พบรายการบันทึกในวันนี้</p>
+      <p className="text-[11px] text-slate-600">สามารถตรวจ Checklist ในแท็บ &quot;ตรวจ Checklist ตามสังกัด&quot; เพื่อบันทึกข้อมูล</p>
     </div>
   )
 
   return (
-    <div className="card overflow-hidden">
-      <div style={{ overflowX: 'auto' }}>
-        <table className="cl-table">
-          <thead>
-            <tr>
-              <th style={{ width: 32 }}>#</th>
-              <SortTh col="contractor_name" label="ชื่อ / บริษัท" />
-              <th>ผู้ควบคุม</th>
-              <th>ประสงค์</th>
-              <SortTh col="check_in_time" label="เข้า / ออก" />
-              <th>กิจกรรม / ระบบงาน</th>
-              <SortTh col="alc_result" label="ALC" />
-              <th style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <HardHat className="w-3.5 h-3.5" />PPE
+    <div className="border border-slate-300 rounded-lg overflow-hidden bg-white shadow-2xs flex-1 min-h-0 flex flex-col h-full">
+      <div className="flex-1 overflow-auto min-h-0 scrollbar-thin">
+        <table className="w-full text-left border-collapse text-xs">
+          <thead className="sticky top-0 bg-slate-100 z-10 select-none">
+            <tr className="border-b border-slate-300 text-slate-900 text-[11px]">
+              <th className="py-2 px-2 w-10 text-center font-bold border-r border-slate-300">#</th>
+              {showDate && (
+                <SortTh col="entry_date" label="วันที่" className="text-center min-w-[85px]" />
+              )}
+              <SortTh col="contractor_name" label="ชื่อลูกทีม / ผู้รับเหมา" className="min-w-[150px]" />
+              <SortTh col="company_name" label="สังกัด / บริษัท" className="min-w-[130px]" />
+              <th className="py-2 px-2.5 border-r border-slate-300 min-w-[90px] font-bold">ผู้ควบคุม</th>
+              <SortTh col="check_in_time" label="เวลาตรวจ" className="text-center min-w-[85px]" />
+              <th className="py-2 px-2.5 border-r border-slate-300 min-w-[130px] font-bold">งาน / กิจกรรม</th>
+              <SortTh col="alc_result" label="ALC" className="text-center min-w-[65px]" />
+              <th className="py-2 px-2 text-center border-r border-slate-300 min-w-[100px] font-bold">
+                <span className="inline-flex items-center gap-1">
+                  <HardHat className="w-3 h-3 text-slate-600" />
+                  PPE
+                </span>
               </th>
-              <th>สถานะ</th>
-              <th className="text-right">ค่าแรง</th>
-              <th style={{ width: 32 }} />
+              <th className="py-2 px-2 text-right border-r border-slate-300 min-w-[70px] font-bold">ค่าแรง</th>
+              <th className="py-2 px-2 text-center w-12 font-bold">จัดการ</th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((e, idx) => (
-              <tr key={e.id}
-                className={cn(e.is_blacklisted ? 'row-danger' : e.alc_result === '>0%' ? 'row-warning' : '')}>
+            {sorted.map((e, idx) => {
+              const isAlcFail = e.alc_result === '>0%'
+              const hasAlcRisk = getContractorAlcRisk(e.contractors) || e.notes?.includes('[เสี่ยง ALC]') || e.purpose?.includes('[เสี่ยง ALC]')
 
-                {/* # */}
-                <td><span style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))' }}>{idx + 1}</span></td>
+              return (
+                <tr
+                  key={e.id}
+                  className={`border-b border-slate-200 transition-colors ${
+                    e.is_blacklisted
+                      ? 'bg-red-50/40 hover:bg-red-50/70'
+                      : isAlcFail
+                      ? 'bg-amber-50/30 hover:bg-amber-50/60'
+                      : 'bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  {/* # */}
+                  <td className="py-1.5 px-2 text-center text-slate-800 font-mono font-normal text-[11px] border-r border-slate-200">
+                    {idx + 1}
+                  </td>
 
-                {/* Name */}
-                <td>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: 'hsl(var(--c-fg))' }}>{e.contractor_name}</p>
-                  <p style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))' }}>{e.company_name ?? '—'}</p>
-                </td>
-
-                {/* Supervisor */}
-                <td><span style={{ fontSize: 12, color: 'hsl(var(--c-fg-2))' }}>{e.supervisor ?? '—'}</span></td>
-
-                {/* Purpose */}
-                <td>
-                  <span style={{ fontSize: 12, color: 'hsl(var(--c-fg-2))', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                    {e.purpose ?? '—'}
-                  </span>
-                </td>
-
-                {/* Time */}
-                <td>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: 'hsl(142 72% 29%)', lineHeight: 1.2 }}>{e.check_in_time ?? '—'}</p>
-                  <p style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))', lineHeight: 1.2 }}>{e.check_out_time ?? '—'}</p>
-                </td>
-
-                {/* Activity / System Works */}
-                <td>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxWidth: 220 }}>
-                    {e.activity_name ? (
-                      e.activity_name.split(',').map((act, i) => (
-                        <span
-                          key={i}
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            padding: '2px 6px',
-                            borderRadius: 6,
-                            background: '#f3e8ff',
-                            color: '#6b21a8',
-                            border: '1px solid #e9d5ff',
-                            display: 'inline-block',
-                            lineHeight: 1.3,
-                          }}
-                        >
-                          {act.trim()}
-                        </span>
-                      ))
-                    ) : (
-                      <span style={{ fontSize: 12, color: 'hsl(var(--c-fg-4))' }}>—</span>
-                    )}
-                  </div>
-                  {e.location && (
-                    <p style={{ fontSize: 10, color: 'hsl(var(--c-fg-4))', marginTop: 3 }}>
-                      📍 {e.location}
-                    </p>
+                  {/* Date (if showDate) */}
+                  {showDate && (
+                    <td className="py-1.5 px-2 text-center text-slate-900 font-mono font-normal text-[11px] border-r border-slate-200 whitespace-nowrap">
+                      {e.entry_date}
+                    </td>
                   )}
-                </td>
 
-                {/* ALC */}
-                <td>
-                  <span className={`badge ${e.alc_result === '>0%' ? 'badge-alc-fail' : 'badge-alc-ok'}`}>
-                    {e.alc_result}
-                  </span>
-                </td>
-
-                {/* PPE */}
-                <td><PPEDots entry={e} /></td>
-
-                {/* Status */}
-                <td>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <span className={`badge ${
-                      e.status === 'active' ? 'badge-active' :
-                      e.status === 'checked_out' ? 'badge-out' : 'badge-cancel'
-                    }`}>
-                      {e.status === 'active' ? 'อยู่ในโครงการ' : e.status === 'checked_out' ? 'ออกแล้ว' : 'ยกเลิก'}
+                  {/* Name (พื้นหลังสีเหลืองจางหากมีความเสี่ยง ALC) */}
+                  <td className={`py-1.5 px-2.5 border-r border-slate-200 ${hasAlcRisk ? 'bg-amber-100/70' : ''}`}>
+                    <span className="font-normal text-slate-950 text-xs">
+                      {e.contractor_name}
                     </span>
-                    {e.is_blacklisted && <span className="badge badge-danger-pill">บัญชีดำ</span>}
-                  </div>
-                </td>
+                  </td>
 
-                {/* Wage */}
-                <td style={{ textAlign: 'right' }}>
-                  {e.daily_wage
-                    ? <span style={{ fontSize: 12, fontWeight: 700, color: 'hsl(var(--c-fg))' }}>{e.daily_wage.toLocaleString()}</span>
-                    : <span style={{ fontSize: 12, color: 'hsl(var(--c-fg-4))' }}>—</span>}
-                </td>
+                  {/* Company */}
+                  <td className="py-1.5 px-2.5 text-slate-800 text-[11px] font-normal border-r border-slate-200 truncate">
+                    {e.company_name || '—'}
+                  </td>
 
-                {/* Actions */}
-                <td>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      className="w-7 h-7 inline-flex items-center justify-center rounded outline-none transition-colors"
-                      style={{ border: '1px solid transparent' }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'hsl(220 14% 96%)'; el.style.borderColor = 'hsl(var(--c-border))' }}
-                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.background = ''; el.style.borderColor = 'transparent' }}
-                    >
-                      <MoreHorizontal className="w-3.5 h-3.5" style={{ color: 'hsl(var(--c-fg-3))' }} />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[140px]">
-                      <DropdownMenuItem>
-                        <Link href={`/checklist/${e.id}/edit`}
-                          className="flex items-center gap-2 w-full text-[12px]">
-                          <Pencil className="w-3.5 h-3.5" /> แก้ไข
-                        </Link>
-                      </DropdownMenuItem>
-                      {e.status === 'active' && (
-                        <DropdownMenuItem onClick={() => onCheckout(e.id)}
-                          className="flex items-center gap-2 text-[12px]"
-                          style={{ color: 'hsl(var(--c-info))' }}>
-                          <LogOut className="w-3.5 h-3.5" /> Check-out
-                        </DropdownMenuItem>
+                  {/* Supervisor */}
+                  <td className="py-1.5 px-2.5 text-slate-800 text-[11px] font-normal border-r border-slate-200 truncate">
+                    {e.supervisor || '—'}
+                  </td>
+
+                  {/* Time */}
+                  <td className="py-1.5 px-2.5 text-center border-r border-slate-200 font-mono text-[11px]">
+                    <span className="text-slate-900 font-bold">{e.check_in_time || '—'}</span>
+                  </td>
+
+                  {/* Activity & Purpose */}
+                  <td className="py-1.5 px-2.5 border-r border-slate-200">
+                    <div className="flex flex-col">
+                      <span className="font-normal text-slate-900 text-[11px] truncate max-w-[140px]">
+                        {e.activity_name || 'งานทั่วไป'}
+                      </span>
+                      {e.purpose && (
+                        <span className="text-[10px] text-blue-900 bg-blue-100 px-1 py-0.2 rounded border border-blue-300 truncate max-w-[140px] mt-0.5 inline-block">
+                          📌 {e.purpose}
+                        </span>
                       )}
-                      <DropdownMenuItem onClick={() => onDelete(e.id)}
-                        className="flex items-center gap-2 text-[12px] text-red-600">
-                        <Trash2 className="w-3.5 h-3.5" /> ลบ
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </td>
-              </tr>
-            ))}
+                      {e.location && (
+                        <span className="text-[10px] text-slate-600 truncate">
+                          📍 {e.location}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* ALC */}
+                  <td className="py-1.5 px-1.5 text-center border-r border-slate-200">
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                        isAlcFail
+                          ? 'bg-red-100 text-red-900 border-red-400'
+                          : 'bg-emerald-100 text-emerald-900 border-emerald-400'
+                      }`}
+                    >
+                      {e.alc_result}
+                    </span>
+                  </td>
+
+                  {/* PPE */}
+                  <td className="py-1.5 px-2 text-center border-r border-slate-200">
+                    <PPECompact entry={e} />
+                  </td>
+
+                  {/* Wage */}
+                  <td className="py-1.5 px-2 text-right border-r border-slate-200 font-mono text-[11px]">
+                    {e.daily_wage ? (
+                      <span className="font-semibold text-slate-950">{e.daily_wage.toLocaleString()}</span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="py-1.5 px-1 text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="w-6 h-6 inline-flex items-center justify-center rounded hover:bg-slate-100 text-slate-500 transition-colors">
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="min-w-[130px] text-xs">
+                        <DropdownMenuItem>
+                          <Link href={`/checklist/${e.id}/edit`} className="flex items-center gap-1.5 w-full">
+                            <Pencil className="w-3 h-3" /> แก้ไขข้อมูล
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onDelete(e.id)}
+                          className="text-red-600 flex items-center gap-1.5"
+                        >
+                          <Trash2 className="w-3 h-3" /> ลบรายการ
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Footer */}
-      <div style={{
-        padding: '8px 16px', borderTop: '1px solid hsl(var(--c-border))',
-        background: 'hsl(220 14% 98%)', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <span style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))' }}>
-          แสดง <strong style={{ color: 'hsl(var(--c-fg))' }}>{entries.length}</strong> รายการ
+      {/* Footer Info Strip */}
+      <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-600">
+        <span>
+          แสดงทั้งหมด <strong className="text-slate-900 font-bold">{entries.length}</strong> รายการ
         </span>
-        <span style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))' }}>
-          อยู่ <strong style={{ color: 'hsl(142 72% 29%)' }}>{entries.filter(e => e.status === 'active').length}</strong>
-          {' '}· ออก <strong style={{ color: 'hsl(var(--c-info))' }}>{entries.filter(e => e.status === 'checked_out').length}</strong>
+        <span>
+          ตรวจผ่านครบ: <strong className="text-emerald-800 font-bold">{entries.filter(e => e.alc_result === '0%' && e.ppe_helmet && e.ppe_vest && e.ppe_shirt && e.ppe_gloves && e.ppe_shoes).length}</strong> รายการ
         </span>
       </div>
     </div>

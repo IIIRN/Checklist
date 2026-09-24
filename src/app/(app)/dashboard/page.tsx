@@ -3,228 +3,294 @@ import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import {
   Users, UserCheck, AlertTriangle, ShieldAlert,
-  HardHat, ClipboardCheck, TrendingUp, Plus,
+  HardHat, ClipboardCheck, ArrowUpRight, Plus,
+  Calendar, Check, ShieldCheck, Zap, MessageSquare
 } from 'lucide-react'
 import Link from 'next/link'
 
-async function getDashboardStats(today: string) {
+async function getDashboardData(today: string) {
   const supabase = await createClient()
   const { data: entries } = await supabase
-    .from('checklist_entries').select('*').eq('entry_date', today)
-  if (!entries) return { total: 0, active: 0, out: 0, alc: 0, ppe: 0, black: 0 }
+    .from('checklist_entries')
+    .select('*')
+    .eq('entry_date', today)
+    .order('created_at', { ascending: false })
+
+  const list = entries ?? []
   return {
-    total: entries.length,
-    active: entries.filter(e => e.status === 'active').length,
-    out: entries.filter(e => e.status === 'checked_out').length,
-    alc: entries.filter(e => e.alc_result === '>0%').length,
-    ppe: entries.filter(e => !e.ppe_helmet || !e.ppe_vest || !e.ppe_shirt || !e.ppe_shoes).length,
-    black: entries.filter(e => e.is_blacklisted).length,
+    total: list.length,
+    active: list.filter(e => e.status === 'active').length,
+    out: list.filter(e => e.status === 'checked_out').length,
+    alc: list.filter(e => e.alc_result === '>0%').length,
+    ppeIncomplete: list.filter(e => !e.ppe_helmet || !e.ppe_vest || !e.ppe_shirt || !e.ppe_gloves || !e.ppe_shoes).length,
+    black: list.filter(e => e.is_blacklisted).length,
+    recent: list.slice(0, 15),
+    allToday: list,
   }
 }
 
-async function getRecentEntries(today: string) {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('checklist_entries').select('*').eq('entry_date', today)
-    .order('created_at', { ascending: false }).limit(10)
-  return data ?? []
-}
-
 const ppeFields = [
-  { key: 'ppe_helmet', label: 'หมวกนิรภัย' },
-  { key: 'ppe_vest',   label: 'เสื้อกั๊ก'   },
-  { key: 'ppe_shirt',  label: 'เสื้อแขนยาว' },
-  { key: 'ppe_gloves', label: 'ถุงมือ'       },
-  { key: 'ppe_shoes',  label: 'รองเท้า'      },
+  { key: 'ppe_helmet' as const, label: 'หมวกนิรภัย', icon: '⛑' },
+  { key: 'ppe_vest' as const,   label: 'เสื้อกั๊กสะท้อนแสง', icon: '🦺' },
+  { key: 'ppe_shirt' as const,  label: 'เสื้อแขนยาว', icon: '👕' },
+  { key: 'ppe_gloves' as const, label: 'ถุงมือเซฟตี้', icon: '🧤' },
+  { key: 'ppe_shoes' as const,  label: 'รองเท้าเซฟตี้', icon: '👢' },
 ]
 
 export default async function DashboardPage() {
   const today = format(new Date(), 'yyyy-MM-dd')
-  const todayThai = format(new Date(), 'd MMMM yyyy', { locale: th })
-  const [stats, recent] = await Promise.all([getDashboardStats(today), getRecentEntries(today)])
+  const todayThai = format(new Date(), 'EEEEที่ d MMMM yyyy', { locale: th })
+  const data = await getDashboardData(today)
 
-  const statCards: {
-    label: string
-    value: number
-    icon: React.ElementType
-    iconBg: React.CSSProperties
-    iconClr: React.CSSProperties
-    cardStyle: React.CSSProperties
-  }[] = [
+  const statTiles = [
     {
-      label: 'คนเข้าวันนี้',    value: stats.total,
+      label: 'คนเข้าวันนี้',
+      value: data.total,
+      unit: 'คน',
       icon: Users,
-      iconBg:   { background: 'hsl(214 100% 97%)' },
-      iconClr:  { color: 'hsl(221 83% 53%)' },
-      cardStyle: { borderTop: '3px solid hsl(221 83% 53%)' },
+      badgeCls: 'bg-blue-50 text-blue-700 border-blue-200',
+      iconBg: 'bg-blue-100 text-blue-700',
     },
     {
-      label: 'อยู่ในโครงการ',   value: stats.active,
+      label: 'อยู่ในโครงการ',
+      value: data.active,
+      unit: 'คน',
       icon: UserCheck,
-      iconBg:   { background: 'hsl(140 60% 93%)' },
-      iconClr:  { color: 'hsl(142 72% 29%)' },
-      cardStyle: { borderTop: '3px solid hsl(142 72% 29%)' },
+      badgeCls: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+      iconBg: 'bg-emerald-100 text-emerald-700',
     },
     {
-      label: 'PPE ไม่ครบ',       value: stats.ppe,
-      icon: HardHat,
-      iconBg:   { background: 'hsl(40 100% 94%)' },
-      iconClr:  { color: 'hsl(34 90% 38%)' },
-      cardStyle: { borderTop: '3px solid hsl(34 90% 38%)' },
-    },
-    {
-      label: 'ALC เกิน 0%',      value: stats.alc,
-      icon: AlertTriangle,
-      iconBg:   { background: 'hsl(0 80% 95%)' },
-      iconClr:  { color: 'hsl(0 72% 50%)' },
-      cardStyle: { borderTop: '3px solid hsl(0 72% 50%)' },
-    },
-    {
-      label: 'Check-out แล้ว',  value: stats.out,
+      label: 'ออกงานแล้ว',
+      value: data.out,
+      unit: 'คน',
       icon: ClipboardCheck,
-      iconBg:   { background: 'hsl(220 14% 94%)' },
-      iconClr:  { color: 'hsl(220 16% 42%)' },
-      cardStyle: { borderTop: '3px solid hsl(220 13% 78%)' },
+      badgeCls: 'bg-slate-100 text-slate-700 border-slate-200',
+      iconBg: 'bg-slate-200 text-slate-700',
     },
     {
-      label: 'บัญชีดำ',          value: stats.black,
+      label: 'ALC ผิดปกติ',
+      value: data.alc,
+      unit: 'คน',
+      icon: AlertTriangle,
+      badgeCls: data.alc > 0 ? 'bg-red-100 text-red-700 border-red-300 font-bold' : 'bg-slate-50 text-slate-600 border-slate-200',
+      iconBg: data.alc > 0 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500',
+    },
+    {
+      label: 'PPE ไม่ครบ',
+      value: data.ppeIncomplete,
+      unit: 'คน',
+      icon: HardHat,
+      badgeCls: data.ppeIncomplete > 0 ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold' : 'bg-slate-50 text-slate-600 border-slate-200',
+      iconBg: data.ppeIncomplete > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500',
+    },
+    {
+      label: 'บัญชีดำ',
+      value: data.black,
+      unit: 'คน',
       icon: ShieldAlert,
-      iconBg:   { background: 'hsl(260 60% 96%)' },
-      iconClr:  { color: 'hsl(258 80% 56%)' },
-      cardStyle: { borderTop: '3px solid hsl(258 80% 56%)' },
+      badgeCls: data.black > 0 ? 'bg-purple-100 text-purple-700 border-purple-300 font-bold' : 'bg-slate-50 text-slate-600 border-slate-200',
+      iconBg: data.black > 0 ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500',
     },
   ]
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col flex-1 min-h-0 h-full gap-2.5 overflow-hidden">
 
-      {/* ── Page header ── */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">ข้อมูลประจำวัน • {todayThai}</p>
+      {/* ── 1. Compact Top Bar: Date & Quick Actions ── */}
+      <div className="p-2 bg-white rounded-lg border border-slate-300 shadow-2xs flex flex-wrap items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-100 text-slate-700 text-xs font-semibold">
+            <Calendar className="w-3.5 h-3.5 text-blue-600" />
+            <span>{todayThai}</span>
+          </div>
+          <span className="text-[11px] text-slate-400 hidden sm:inline">•</span>
+          <span className="text-xs text-slate-600 hidden sm:inline">
+            ภาพรวมการเข้า-ออก และตรวจสอบความปลอดภัยประจำวัน
+          </span>
         </div>
-        <Link href="/checklist/new"
-          className="ctrl-btn ctrl-btn-primary">
-          <Plus className="w-3.5 h-3.5" />
-          เพิ่มรายการ
-        </Link>
+
+        <div className="flex items-center gap-1.5">
+          <Link
+            href="/checklist"
+            className="h-7 px-2.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-2xs transition-colors"
+          >
+            <Zap className="w-3 h-3 text-amber-300 fill-amber-300" />
+            <span>ตรวจ Checklist วันนี้</span>
+          </Link>
+          <Link
+            href="/line-oa"
+            className="h-7 px-2.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-2xs transition-colors"
+          >
+            <MessageSquare className="w-3 h-3" />
+            <span>แจ้งเตือน LINE</span>
+          </Link>
+        </div>
       </div>
 
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-3 xl:grid-cols-6 gap-3">
-        {statCards.map((s, i) => {
-          const Icon = s.icon
+      {/* ── 2. Stat Tiles Strip (6 Compact Tiles in 1 Row) ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 shrink-0">
+        {statTiles.map((tile, i) => {
+          const Icon = tile.icon
           return (
-            <div key={i} className="stat-card" style={s.cardStyle}>
-              <div className="stat-card-icon" style={s.iconBg}>
-                <Icon className="w-4 h-4" style={s.iconClr} />
+            <div
+              key={i}
+              className="p-2 bg-white rounded-lg border border-slate-300 shadow-2xs flex items-center justify-between gap-2"
+            >
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold text-slate-500 block truncate uppercase tracking-wider">
+                  {tile.label}
+                </span>
+                <div className="flex items-baseline gap-1 mt-0.5">
+                  <span className="text-lg font-bold text-slate-900 leading-none">
+                    {tile.value}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    {tile.unit}
+                  </span>
+                </div>
               </div>
-              <div className="stat-value">{s.value}</div>
-              <div className="stat-label">{s.label}</div>
+              <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${tile.iconBg}`}>
+                <Icon className="w-4 h-4" />
+              </div>
             </div>
           )
         })}
       </div>
 
-      {/* ── Main grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* ── 3. Main Split Grid (Full Height: Spreadsheet Table + Side Summary) ── */}
+      <div className="flex flex-col lg:flex-row items-stretch gap-2.5 flex-1 min-h-0 overflow-hidden">
 
-        {/* Recent entries */}
-        <div className="lg:col-span-2 card overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid hsl(var(--c-border))' }}>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" style={{ color: 'hsl(var(--c-brand))' }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'hsl(var(--c-fg))' }}>รายการล่าสุดวันนี้</span>
+        {/* ── Left Area (2/3 width): Spreadsheet Grid of Recent Checklists ── */}
+        <div className="flex-1 min-w-0 flex flex-col border border-slate-300 rounded-lg overflow-hidden bg-white shadow-2xs h-full">
+          {/* Table Header Strip */}
+          <div className="px-3 py-2 bg-slate-100 border-b border-slate-300 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
+              <ClipboardCheck className="w-3.5 h-3.5 text-blue-600" />
+              <span>รายการบันทึกเข้าโครงการวันนี้ ({data.recent.length})</span>
             </div>
-            <Link href="/checklist"
-              className="text-[11px] font-semibold px-2.5 py-1 rounded"
-              style={{ color: 'hsl(var(--c-brand))', background: 'hsl(var(--c-brand-bg))', border: '1px solid hsl(214 100% 88%)' }}>
-              ดูทั้งหมด
+            <Link
+              href="/checklist"
+              className="text-[11px] font-bold text-blue-700 hover:text-blue-900 inline-flex items-center gap-0.5"
+            >
+              <span>ดูและตรวจทั้งหมด</span>
+              <ArrowUpRight className="w-3 h-3" />
             </Link>
           </div>
 
-          {recent.length === 0 ? (
-            <div className="flex-center flex-col py-14 gap-2" style={{ color: 'hsl(var(--c-fg-4))' }}>
-              <ClipboardCheck className="w-8 h-8 opacity-30" />
-              <span className="text-[12px]">ยังไม่มีรายการวันนี้</span>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="cl-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>ชื่อ / บริษัท</th>
-                    <th>เวลาเข้า</th>
-                    <th>กิจกรรม</th>
-                    <th>ALC</th>
-                    <th>PPE</th>
-                    <th>สถานะ</th>
+          {/* Table Container */}
+          <div className="flex-1 overflow-auto min-h-0 scrollbar-thin">
+            {data.recent.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center py-12 gap-2 text-slate-400 text-xs">
+                <HardHat className="w-8 h-8 text-slate-300" />
+                <p className="font-semibold text-slate-600">ยังไม่มีรายการบันทึกในวันนี้</p>
+                <Link
+                  href="/checklist"
+                  className="mt-1 px-3 py-1 bg-blue-600 text-white rounded text-[11px] font-bold hover:bg-blue-700"
+                >
+                  เริ่มตรวจ Checklist ตอนนี้
+                </Link>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="sticky top-0 bg-slate-100 z-10 select-none">
+                  <tr className="border-b border-slate-300 text-slate-700 text-[11px]">
+                    <th className="py-1.5 px-2 w-10 text-center font-bold border-r border-slate-300">#</th>
+                    <th className="py-1.5 px-2.5 min-w-[140px] font-bold border-r border-slate-300">ชื่อลูกทีม / ช่าง</th>
+                    <th className="py-1.5 px-2 min-w-[120px] font-bold border-r border-slate-300">สังกัด</th>
+                    <th className="py-1.5 px-2 text-center min-w-[85px] font-bold border-r border-slate-300">เข้า / ออก</th>
+                    <th className="py-1.5 px-2 min-w-[110px] font-bold border-r border-slate-300">งานที่ปฏิบัติ</th>
+                    <th className="py-1.5 px-1.5 text-center min-w-[65px] font-bold border-r border-slate-300">ALC</th>
+                    <th className="py-1.5 px-2 text-center min-w-[70px] font-bold border-r border-slate-300">PPE</th>
+                    <th className="py-1.5 px-2 text-center min-w-[85px] font-bold">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recent.map((e, i) => {
-                    const ppeOk = ppeFields.every(f => e[f.key as keyof typeof e])
+                  {data.recent.map((e, idx) => {
+                    const ppeCount = [
+                      e.ppe_helmet,
+                      e.ppe_vest,
+                      e.ppe_shirt,
+                      e.ppe_gloves,
+                      e.ppe_shoes,
+                    ].filter(Boolean).length
+
                     return (
-                      <tr key={e.id}
-                        className={e.is_blacklisted ? 'row-danger' : e.alc_result === '>0%' ? 'row-warning' : ''}>
-                        <td>
-                          <span style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))' }}>{i + 1}</span>
+                      <tr
+                        key={e.id}
+                        className={`border-b border-slate-200 transition-colors ${
+                          e.is_blacklisted
+                            ? 'bg-red-50/50 hover:bg-red-50/70'
+                            : e.alc_result === '>0%'
+                            ? 'bg-amber-50/40 hover:bg-amber-50/70'
+                            : 'bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        {/* # */}
+                        <td className="py-1.5 px-2 text-center text-slate-400 font-mono text-[11px] border-r border-slate-200">
+                          {idx + 1}
                         </td>
-                        <td>
-                          <p style={{ fontSize: 12, fontWeight: 700, color: 'hsl(var(--c-fg))' }}>
+
+                        {/* Name */}
+                        <td className="py-1.5 px-2.5 border-r border-slate-200">
+                          <span className="font-semibold text-slate-900 text-xs">
                             {e.contractor_name}
-                          </p>
-                          <p style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))' }}>{e.company_name ?? '—'}</p>
-                        </td>
-                        <td>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: 'hsl(142 72% 29%)' }}>
-                            {e.check_in_time ?? '—'}
                           </span>
                         </td>
-                        <td>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, maxWidth: 180 }}>
-                            {e.activity_name ? (
-                              e.activity_name.split(',').map((act: string, i: number) => (
-                                <span
-                                  key={i}
-                                  style={{
-                                    fontSize: 10,
-                                    fontWeight: 600,
-                                    padding: '1px 5px',
-                                    borderRadius: 4,
-                                    background: '#f3e8ff',
-                                    color: '#6b21a8',
-                                    border: '1px solid #e9d5ff',
-                                    display: 'inline-block',
-                                    lineHeight: 1.2,
-                                  }}
-                                >
-                                  {act.trim()}
-                                </span>
-                              ))
-                            ) : (
-                              <span style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))' }}>—</span>
-                            )}
-                          </div>
+
+                        {/* Company */}
+                        <td className="py-1.5 px-2 text-slate-600 text-[11px] border-r border-slate-200 truncate">
+                          {e.company_name || '—'}
                         </td>
-                        <td>
-                          <span className={`badge ${e.alc_result === '>0%' ? 'badge-alc-fail' : 'badge-alc-ok'}`}>
+
+                        {/* Time */}
+                        <td className="py-1.5 px-2 text-center border-r border-slate-200 font-mono text-[11px]">
+                          <span className="text-emerald-700 font-bold">{e.check_in_time || '—'}</span>
+                          {e.check_out_time && (
+                            <span className="text-slate-400 ml-1">/ {e.check_out_time}</span>
+                          )}
+                        </td>
+
+                        {/* Activity */}
+                        <td className="py-1.5 px-2 text-slate-700 text-[11px] border-r border-slate-200 truncate">
+                          {e.activity_name || 'งานทั่วไป'}
+                        </td>
+
+                        {/* ALC */}
+                        <td className="py-1.5 px-1.5 text-center border-r border-slate-200">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                              e.alc_result === '>0%'
+                                ? 'bg-red-100 text-red-700 border-red-300'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}
+                          >
                             {e.alc_result}
                           </span>
                         </td>
-                        <td>
-                          <span className={`badge ${ppeOk ? 'badge-active' : 'badge-warn'}`}>
-                            {ppeOk ? 'ครบ' : 'ไม่ครบ'}
+
+                        {/* PPE */}
+                        <td className="py-1.5 px-2 text-center border-r border-slate-200">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                              ppeCount === 5
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-amber-50 text-amber-700'
+                            }`}
+                          >
+                            {ppeCount}/5
                           </span>
                         </td>
-                        <td>
-                          <span className={`badge ${
-                            e.status === 'active' ? 'badge-active' :
-                            e.status === 'checked_out' ? 'badge-out' : 'badge-cancel'
-                          }`}>
-                            {e.status === 'active' ? 'อยู่' : e.status === 'checked_out' ? 'ออก' : 'ยกเลิก'}
+
+                        {/* Status */}
+                        <td className="py-1.5 px-2 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              e.status === 'active'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            {e.status === 'active' ? 'อยู่ในโครงการ' : 'ออกงานแล้ว'}
                           </span>
                         </td>
                       </tr>
@@ -232,62 +298,127 @@ export default async function DashboardPage() {
                   })}
                 </tbody>
               </table>
-            </div>
-          )}
-        </div>
-
-        {/* Side panels */}
-        <div className="space-y-4">
-
-          {/* Quick links */}
-          <div className="card overflow-hidden">
-            <div className="px-4 py-3" style={{ borderBottom: '1px solid hsl(var(--c-border))' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'hsl(var(--c-fg))' }}>เมนูลัด</span>
-            </div>
-            <div className="p-2 space-y-0.5">
-              {[
-                { href: '/checklist/new', icon: Plus,          label: 'เพิ่มรายการ Checklist', clr: 'hsl(var(--c-brand))'   },
-                { href: '/checklist',     icon: ClipboardCheck, label: 'ดู Checklist วันนี้',   clr: 'hsl(142 72% 29%)'      },
-                { href: '/contractors',   icon: Users,          label: 'จัดการผู้รับเหมา',       clr: 'hsl(258 80% 56%)'      },
-                { href: '/history',       icon: TrendingUp,     label: 'ดูประวัติทั้งหมด',       clr: 'hsl(34 90% 38%)'       },
-              ].map(item => (
-                <Link key={item.href} href={item.href} className="quick-link">
-                  <item.icon className="w-3.5 h-3.5 shrink-0" style={{ color: item.clr }} />
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+            )}
           </div>
 
-          {/* PPE Summary */}
-          <div className="card overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid hsl(var(--c-border))' }}>
-              <HardHat className="w-4 h-4" style={{ color: 'hsl(34 90% 38%)' }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'hsl(var(--c-fg))' }}>PPE Summary</span>
+          {/* Table Bottom Strip */}
+          <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+            <span>แสดง {data.recent.length} รายการล่าสุด</span>
+            <span>บันทึกทั้งหมดวันนี้: <strong className="text-slate-800 font-bold">{data.total}</strong> คน</span>
+          </div>
+        </div>
+
+        {/* ── Right Area (1/3 width): PPE Compliance Summary & Quick Links ── */}
+        <div className="w-full lg:w-72 xl:w-80 shrink-0 flex flex-col gap-2.5 h-full">
+
+          {/* PPE Compliance Card */}
+          <div className="p-3 bg-white rounded-lg border border-slate-300 shadow-2xs flex flex-col gap-2 shrink-0">
+            <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                <HardHat className="w-3.5 h-3.5 text-amber-600" />
+                <span>การสวมใส่อุปกรณ์ PPE วันนี้</span>
+              </div>
+              <span className="text-[10px] text-slate-400 font-mono">
+                ({data.allToday.length} คน)
+              </span>
             </div>
-            <div className="p-4 space-y-3">
-              {ppeFields.map(f => {
-                const count = recent.filter(e => e[f.key as keyof typeof e]).length
-                const total = recent.length
-                const pct = total > 0 ? Math.round(count / total * 100) : 0
-                const barClr = pct >= 80 ? 'hsl(142 72% 29%)' : pct >= 50 ? 'hsl(34 90% 38%)' : 'hsl(0 72% 50%)'
+
+            <div className="space-y-2 pt-1 text-xs">
+              {ppeFields.map(field => {
+                const passedCount = data.allToday.filter(e => e[field.key]).length
+                const total = data.allToday.length
+                const pct = total > 0 ? Math.round((passedCount / total) * 100) : 0
+
                 return (
-                  <div key={f.key}>
-                    <div className="flex justify-between mb-1">
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'hsl(var(--c-fg-2))' }}>{f.label}</span>
-                      <span style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))' }}>{count}/{total} · {pct}%</span>
+                  <div key={field.key} className="space-y-0.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-700 flex items-center gap-1 font-medium">
+                        <span>{field.icon}</span>
+                        <span>{field.label}</span>
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-slate-600">
+                        {passedCount}/{total} ({pct}%)
+                      </span>
                     </div>
-                    <div style={{ height: 4, background: 'hsl(var(--c-border))', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', borderRadius: 2, background: barClr,
-                        width: `${pct}%`, transition: 'width 0.5s ease',
-                      }} />
+                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          pct === 100
+                            ? 'bg-emerald-500'
+                            : pct >= 80
+                            ? 'bg-blue-500'
+                            : pct >= 50
+                            ? 'bg-amber-500'
+                            : 'bg-red-500'
+                        }`}
+                        style={{ width: `${pct}%` }}
+                      />
                     </div>
                   </div>
                 )
               })}
             </div>
           </div>
+
+          {/* Quick Nav Shortcuts Card */}
+          <div className="p-3 bg-white rounded-lg border border-slate-300 shadow-2xs flex-1 flex flex-col justify-between">
+            <div>
+              <span className="text-xs font-bold text-slate-800 block pb-1.5 border-b border-slate-200">
+                เมนูลัดของระบบ
+              </span>
+              <div className="mt-2 space-y-1 text-xs">
+                <Link
+                  href="/checklist"
+                  className="p-2 rounded border border-slate-200 hover:bg-slate-50 flex items-center justify-between text-slate-700 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    ตรวจ Checklist ตามสังกัด
+                  </span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+                </Link>
+
+                <Link
+                  href="/contractors"
+                  className="p-2 rounded border border-slate-200 hover:bg-slate-50 flex items-center justify-between text-slate-700 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <Users className="w-3.5 h-3.5 text-blue-600" />
+                    จัดการรายชื่อผู้รับเหมา/ช่าง
+                  </span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+                </Link>
+
+                <Link
+                  href="/activities"
+                  className="p-2 rounded border border-slate-200 hover:bg-slate-50 flex items-center justify-between text-slate-700 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <HardHat className="w-3.5 h-3.5 text-emerald-600" />
+                    กำหนดกิจกรรม / ระบบงาน
+                  </span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+                </Link>
+
+                <Link
+                  href="/history"
+                  className="p-2 rounded border border-slate-200 hover:bg-slate-50 flex items-center justify-between text-slate-700 transition-colors"
+                >
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <ClipboardCheck className="w-3.5 h-3.5 text-purple-600" />
+                    ดูประวัติย้อนหลังและรายงาน
+                  </span>
+                  <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 text-[10px] text-slate-400 flex items-center justify-between">
+              <span>สถานะระบบ: ปกติ</span>
+              <span>เวอร์ชันล่าสุด</span>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

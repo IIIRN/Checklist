@@ -27,10 +27,37 @@ export interface Contractor {
   employee_type: 'employee' | 'contractor'
   position: string | null
   phone: string | null
+  daily_wage?: number | null
+  alc_risk?: boolean | null
   is_active: boolean
   created_at: string
   updated_at: string
   companies?: Company
+}
+
+export function getContractorAlcRisk(c?: Partial<Contractor> | null): boolean {
+  if (!c) return false
+  if (c.alc_risk === true) return true
+  if (c.position && (c.position.includes('[เสี่ยง ALC]') || c.position.includes('[ALC_RISK]') || c.position.includes('[ALC]'))) return true
+  return false
+}
+
+export function getContractorDailyWage(c?: Partial<Contractor> | null): number | null {
+  if (!c) return null
+  if (typeof c.daily_wage === 'number' && !isNaN(c.daily_wage)) return c.daily_wage
+  if (c.position) {
+    const match = c.position.match(/\[(?:ค่าแรง|WAGE):?\s*(\d+)\]/i)
+    if (match) return parseInt(match[1], 10)
+  }
+  return null
+}
+
+export function cleanContractorPosition(pos?: string | null): string {
+  if (!pos) return ''
+  return pos
+    .replace(/\[(?:เสี่ยง ALC|ALC_RISK|ALC)\]/gi, '')
+    .replace(/\[(?:ค่าแรง|WAGE):?\s*\d+\]/gi, '')
+    .trim()
 }
 
 export interface Activity {

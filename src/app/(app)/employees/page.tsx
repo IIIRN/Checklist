@@ -9,15 +9,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
-  Users, UserCheck, Shield, ShieldCheck, Eye, Search,
-  Plus, Pencil, Trash2, RefreshCw, Loader2, Mail, Phone,
-  Building2, LayoutGrid, List, CheckCircle2, UserCog
+  Shield, ShieldCheck, Eye, Search, Plus, Pencil, Trash2,
+  RefreshCw, Loader2, Phone, ChevronDown, CheckCircle2, XCircle, UserCog
 } from 'lucide-react'
 
 interface UserFormData {
@@ -73,7 +71,6 @@ export default function EmployeesPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all')
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
 
   // Modal State
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -231,296 +228,247 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="space-y-5 pb-24 md:pb-8">
-      {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 font-bold shadow-xs">
-            <UserCog className="w-5 h-5" />
+    <div className="flex flex-col flex-1 min-h-0 h-full gap-2 overflow-hidden">
+      {/* ── Compact Top Controls Bar ── */}
+      <div className="p-2 bg-white rounded-lg border border-slate-300 shadow-2xs flex flex-wrap items-center justify-between gap-2 shrink-0">
+        
+        {/* Left: Title & Role Filter Tabs */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-blue-50 text-blue-800 text-xs font-bold border border-blue-200">
+            <UserCog className="w-3.5 h-3.5 text-blue-600" />
+            <span>จัดการพนักงาน (ผู้ใช้งาน)</span>
           </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              จัดการพนักงาน (ผู้ใช้งานระบบ)
-            </h1>
-            <p className="text-xs md:text-sm text-slate-500">
-              รายชื่อเจ้าหน้าที่, หัวหน้างาน (Supervisor), และผู้ดูแลระบบ (Admin) ที่มีสิทธิ์ล็อกอินใช้งาน
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchData(true)}
-            disabled={refreshing || loading}
-            className="h-9 px-3 bg-white"
-            title="รีเฟรชข้อมูล"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          </Button>
-
-          <Button
-            onClick={openCreate}
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm h-9 px-4 font-semibold transition-all"
-          >
-            <Plus className="w-4 h-4 mr-1.5" /> เพิ่มผู้ใช้งานระบบ
-          </Button>
-        </div>
-      </div>
-
-      {/* ── Summary Stats ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="shadow-xs bg-white">
-          <CardContent className="p-3.5 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 font-bold">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xl font-bold tracking-tight text-slate-900">{stats.total}</p>
-              <p className="text-xs text-slate-500 font-medium">ผู้ใช้งานระบบทั้งหมด</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-xs bg-white">
-          <CardContent className="p-3.5 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0 font-bold">
-              <Shield className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xl font-bold tracking-tight text-purple-700">{stats.admins}</p>
-              <p className="text-xs text-slate-500 font-medium">ผู้ดูแลระบบ (Admin)</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-xs bg-white">
-          <CardContent className="p-3.5 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 font-bold">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xl font-bold tracking-tight text-blue-700">{stats.supervisors}</p>
-              <p className="text-xs text-slate-500 font-medium">หัวหน้างาน (Supervisor)</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-xs bg-white">
-          <CardContent className="p-3.5 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 font-bold">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xl font-bold tracking-tight text-emerald-600">{stats.active}</p>
-              <p className="text-xs text-slate-500 font-medium">เปิดใช้งาน (Active)</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ── Filters & Search Bar ── */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-xl shadow-xs border-0">
-        <div className="flex-1 max-w-md relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="ค้นหาชื่อ, อีเมล, แผนก, เบอร์โทร..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9 h-9 bg-white"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          {/* Role Filter Buttons */}
-          <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs font-semibold">
+          {/* Quick role tabs */}
+          <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded border border-slate-200 text-xs">
             <button
               onClick={() => setRoleFilter('all')}
-              className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
-                roleFilter === 'all' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
+                roleFilter === 'all'
+                  ? 'bg-white text-slate-800 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               ทั้งหมด ({stats.total})
             </button>
             <button
               onClick={() => setRoleFilter('admin')}
-              className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
-                roleFilter === 'admin' ? 'bg-white text-purple-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all flex items-center gap-1 ${
+                roleFilter === 'admin'
+                  ? 'bg-purple-600 text-white shadow-2xs'
+                  : 'text-purple-700 hover:text-purple-900'
               }`}
             >
+              <Shield className="w-3 h-3" />
               Admin ({stats.admins})
             </button>
             <button
               onClick={() => setRoleFilter('supervisor')}
-              className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
-                roleFilter === 'supervisor' ? 'bg-white text-blue-700 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all flex items-center gap-1 ${
+                roleFilter === 'supervisor'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-blue-700 hover:text-blue-900'
               }`}
             >
+              <ShieldCheck className="w-3 h-3" />
               Supervisor ({stats.supervisors})
             </button>
             <button
               onClick={() => setRoleFilter('viewer')}
-              className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
-                roleFilter === 'viewer' ? 'bg-white text-slate-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all flex items-center gap-1 ${
+                roleFilter === 'viewer'
+                  ? 'bg-slate-700 text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
+              <Eye className="w-3 h-3" />
               Viewer ({stats.viewers})
             </button>
           </div>
+        </div>
 
-          {/* Toggle View Mode */}
-          <div className="hidden sm:flex items-center border border-slate-200 rounded-lg p-0.5 bg-slate-50">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                viewMode === 'table' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-400 hover:text-slate-700'
-              }`}
-              title="มุมมองตาราง"
-            >
-              <List className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`p-1.5 rounded-md transition-all cursor-pointer ${
-                viewMode === 'cards' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-400 hover:text-slate-700'
-              }`}
-              title="มุมมองการ์ด"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
+        {/* Right: Search + Refresh + Add */}
+        <div className="flex items-center gap-1.5 ml-auto flex-wrap">
+          {/* Search box */}
+          <div className="relative w-44 sm:w-56">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="search"
+              placeholder="ค้นหาชื่อ, อีเมล, แผนก..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full text-xs pl-8 pr-2.5 py-1 rounded border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
           </div>
+
+          {/* Refresh button */}
+          <button
+            onClick={() => fetchData(true)}
+            disabled={refreshing || loading}
+            className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors disabled:opacity-50"
+            title="รีเฟรชข้อมูล"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing || loading ? 'animate-spin' : ''}`} />
+          </button>
+
+          {/* Add button */}
+          <Button
+            size="sm"
+            onClick={openCreate}
+            className="h-7 px-2.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-2xs gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>เพิ่มผู้ใช้</span>
+          </Button>
         </div>
       </div>
 
-      {/* ── Content View ── */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-xs text-slate-400 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <p className="text-xs">กำลังโหลดข้อมูลผู้ใช้งานระบบ...</p>
-        </div>
-      ) : filteredUsers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl shadow-xs text-center">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
-            <UserCog className="w-6 h-6" />
+      {/* ── Table Container (Spreadsheet Grid) ── */}
+      <div className="border border-slate-300 rounded-lg overflow-hidden bg-white shadow-2xs flex-1 min-h-0 flex flex-col h-full">
+        {loading ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-400">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+            <span className="text-xs">กำลังโหลดข้อมูลผู้ใช้งาน...</span>
           </div>
-          <h3 className="font-bold text-slate-800 text-sm">ไม่พบข้อมูลผู้ใช้งานระบบ</h3>
-          <p className="text-xs text-slate-400 mt-1 max-w-sm">
-            {search ? 'ไม่พบข้อมูลที่ตรงกับคำค้นหา ลองตรวจสอบคำค้นหาอีกครั้ง' : 'ยังไม่มีผู้ใช้งานในระบบ เริ่มต้นสร้างบัญชีพนักงานคนแรกได้เลย'}
-          </p>
-          <Button onClick={openCreate} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-9">
-            <Plus className="w-3.5 h-3.5 mr-1" /> เพิ่มผู้ใช้งานใหม่
-          </Button>
-        </div>
-      ) : viewMode === 'table' ? (
-        /* ── TABLE VIEW ── */
-        <div className="bg-white rounded-2xl shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">ชื่อ - นามสกุล</th>
-                  <th className="py-3 px-4">อีเมล (บัญชีเข้าใช้)</th>
-                  <th className="py-3 px-4">บทบาท / สิทธิ์</th>
-                  <th className="py-3 px-4">แผนก / สังกัด</th>
-                  <th className="py-3 px-4">เบอร์โทรศัพท์</th>
-                  <th className="py-3 px-4 text-center">สถานะ</th>
-                  <th className="py-3 px-4 text-right">จัดการ</th>
+        ) : filteredUsers.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-slate-400 p-4">
+            <UserCog className="w-8 h-8 stroke-1 text-slate-300" />
+            <span className="text-xs font-medium text-slate-500">
+              {search || roleFilter !== 'all'
+                ? 'ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา'
+                : 'ยังไม่มีข้อมูลผู้ใช้งานในระบบ'}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={openCreate}
+              className="h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-50"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> เพิ่มผู้ใช้งานคนแรก
+            </Button>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-auto min-h-0 scrollbar-thin">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 bg-slate-100 z-10 select-none">
+                <tr className="text-[11px] font-bold text-slate-700 border-b border-slate-300">
+                  <th className="py-2 px-2.5 text-center w-12 border-r border-slate-300">#</th>
+                  <th className="py-2 px-3 border-r border-slate-300">ชื่อ - นามสกุล</th>
+                  <th className="py-2 px-3 border-r border-slate-300">อีเมล (Login)</th>
+                  <th className="py-2 px-3 border-r border-slate-300">บทบาท / สิทธิ์</th>
+                  <th className="py-2 px-3 border-r border-slate-300">แผนก / สังกัด</th>
+                  <th className="py-2 px-3 border-r border-slate-300">เบอร์ติดต่อ</th>
+                  <th className="py-2 px-2.5 text-center w-24 border-r border-slate-300">สถานะ</th>
+                  <th className="py-2 px-2.5 text-center w-20">จัดการ</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-800">
-                {filteredUsers.map(u => {
+              <tbody className="text-xs divide-y divide-slate-200">
+                {filteredUsers.map((u, idx) => {
                   const roleCfg = ROLE_CONFIG[u.role] || ROLE_CONFIG.viewer
                   const RoleIcon = roleCfg.icon
                   const isActive = u.is_active !== false
 
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
-                      {/* Name & Avatar */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${roleCfg.bg} ${roleCfg.color}`}>
-                            {u.full_name ? u.full_name.substring(0, 2).toUpperCase() : '?'}
+                    <tr
+                      key={u.id}
+                      className={`hover:bg-blue-50/30 transition-colors ${
+                        !isActive ? 'bg-slate-50/70 text-slate-400' : 'text-slate-800'
+                      }`}
+                    >
+                      {/* Index */}
+                      <td className="py-1.5 px-2.5 text-center text-[11px] text-slate-400 font-medium border-r border-slate-200">
+                        {idx + 1}
+                      </td>
+
+                      {/* Full Name */}
+                      <td className="py-1.5 px-3 font-semibold border-r border-slate-200">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                              !isActive
+                                ? 'bg-slate-200 text-slate-500'
+                                : u.role === 'admin'
+                                ? 'bg-purple-100 text-purple-700'
+                                : 'bg-blue-100 text-blue-700'
+                            }`}
+                          >
+                            {(u.full_name ?? '?').trim().charAt(0) || '?'}
                           </div>
-                          <div>
-                            <p className="font-bold text-slate-900">{u.full_name || 'ไม่ระบุชื่อ'}</p>
-                          </div>
+                          <span className={isActive ? 'text-slate-900' : 'text-slate-500'}>
+                            {u.full_name || 'ไม่ระบุชื่อ'}
+                          </span>
                         </div>
                       </td>
 
                       {/* Email */}
-                      <td className="py-3 px-4">
-                        <span className="font-medium text-slate-600 flex items-center gap-1.5">
-                          <Mail className="w-3.5 h-3.5 text-slate-400" />
-                          {u.email || '-'}
-                        </span>
+                      <td className="py-1.5 px-3 border-r border-slate-200 font-mono text-[11px] text-slate-600">
+                        {u.email}
                       </td>
 
                       {/* Role Badge */}
-                      <td className="py-3 px-4">
-                        <Badge
-                          variant="outline"
-                          className={`${roleCfg.bg} ${roleCfg.color} ${roleCfg.border} font-semibold text-xs flex items-center gap-1 w-fit`}
+                      <td className="py-1.5 px-3 border-r border-slate-200">
+                        <span
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold border ${roleCfg.bg} ${roleCfg.color} ${roleCfg.border}`}
                         >
                           <RoleIcon className="w-3 h-3" />
-                          {roleCfg.label}
-                        </Badge>
+                          <span>{roleCfg.label.split(' ')[0]}</span>
+                        </span>
                       </td>
 
                       {/* Department */}
-                      <td className="py-3 px-4">
-                        <span className="text-slate-600 flex items-center gap-1">
-                          <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                      <td className="py-1.5 px-3 border-r border-slate-200">
+                        <span className="font-medium text-slate-700">
                           {u.department || '-'}
                         </span>
                       </td>
 
                       {/* Phone */}
-                      <td className="py-3 px-4">
-                        <span className="text-slate-600 flex items-center gap-1">
-                          <Phone className="w-3.5 h-3.5 text-slate-400" />
-                          {u.phone || '-'}
-                        </span>
+                      <td className="py-1.5 px-3 border-r border-slate-200 font-mono text-[11px]">
+                        {u.phone ? (
+                          <a
+                            href={`tel:${u.phone}`}
+                            className="text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            <Phone className="w-3 h-3 text-slate-400" />
+                            <span>{u.phone}</span>
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
                       </td>
 
-                      {/* Active Status */}
-                      <td className="py-3 px-4 text-center">
+                      {/* Status Toggle */}
+                      <td className="py-1.5 px-2.5 text-center border-r border-slate-200">
                         <button
-                          type="button"
                           onClick={() => handleToggleActive(u)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer transition-colors ${
                             isActive
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100'
+                              : 'bg-slate-100 text-slate-500 border border-slate-300 hover:bg-slate-200'
                           }`}
                           title="คลิกเพื่อสลับสถานะ"
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                          {isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}
+                          {isActive ? 'ใช้งาน' : 'ระงับ'}
                         </button>
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-slate-600 hover:text-blue-600 hover:bg-blue-50"
+                      <td className="py-1.5 px-2 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
                             onClick={() => openEdit(u)}
+                            className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-500 hover:text-blue-600 transition-colors"
                             title="แก้ไขข้อมูล"
                           >
                             <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                            onClick={() => handleDelete(u.id, u.full_name || u.email || 'ผู้ใช้')}
-                            title="ลบผู้ใช้งาน"
+                          </button>
+                          <button
+                            onClick={() => handleDelete(u.id, u.full_name || u.email || 'ผู้ใช้งาน')}
+                            className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                            title="ลบ"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -529,137 +477,66 @@ export default function EmployeesPage() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* ── Table Footer ── */}
+        <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+          <div>
+            แสดง <span className="font-semibold text-slate-700">{filteredUsers.length}</span> จากทั้งหมด{' '}
+            <span className="font-semibold text-slate-700">{stats.total}</span> คน
+            {roleFilter !== 'all' && ` (กรองสิทธิ์: ${roleFilter})`}
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+              พร้อมใช้งาน {stats.active} คน
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
+              ระงับ {stats.total - stats.active} คน
+            </span>
+          </div>
         </div>
-      ) : (
-        /* ── CARDS VIEW ── */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {filteredUsers.map(u => {
-            const roleCfg = ROLE_CONFIG[u.role] || ROLE_CONFIG.viewer
-            const RoleIcon = roleCfg.icon
-            const isActive = u.is_active !== false
+      </div>
 
-            return (
-              <div
-                key={u.id}
-                className="bg-white rounded-2xl p-4 shadow-xs hover:shadow-md transition-all flex flex-col justify-between border-0"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm ${roleCfg.bg} ${roleCfg.color}`}>
-                        {u.full_name ? u.full_name.substring(0, 2).toUpperCase() : '?'}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-slate-900 text-sm">{u.full_name || 'ไม่ระบุชื่อ'}</h3>
-                        <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Mail className="w-3 h-3 text-slate-400" />
-                          {u.email || '-'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <Badge
-                      variant="outline"
-                      className={`text-[11px] font-semibold cursor-pointer ${
-                        isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500'
-                      }`}
-                      onClick={() => handleToggleActive(u)}
-                    >
-                      {isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs text-slate-600">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">บทบาท:</span>
-                      <Badge
-                        variant="outline"
-                        className={`${roleCfg.bg} ${roleCfg.color} ${roleCfg.border} font-semibold text-[11px] flex items-center gap-1`}
-                      >
-                        <RoleIcon className="w-3 h-3" />
-                        {roleCfg.label}
-                      </Badge>
-                    </div>
-                    {u.department && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">แผนก:</span>
-                        <span className="font-medium text-slate-800">{u.department}</span>
-                      </div>
-                    )}
-                    {u.phone && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-400">เบอร์โทร:</span>
-                        <span className="font-medium text-slate-800">{u.phone}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-1.5 pt-3 mt-3 border-t border-slate-100">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs font-semibold bg-white text-slate-700 border-slate-200"
-                    onClick={() => openEdit(u)}
-                  >
-                    <Pencil className="w-3 h-3 mr-1" /> แก้ไข
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs font-semibold text-rose-600 hover:bg-rose-50"
-                    onClick={() => handleDelete(u.id, u.full_name || u.email || 'ผู้ใช้')}
-                  >
-                    <Trash2 className="w-3 h-3 mr-1" /> ลบ
-                  </Button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* ── Dialog Form (เพิ่ม / แก้ไข ผู้ใช้งานระบบ) ── */}
+      {/* ── Dialog: Add & Edit User ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md bg-white rounded-2xl shadow-2xl border-0 ring-0 p-6">
+        <DialogContent className="max-w-md p-5 bg-white rounded-xl shadow-xl border border-slate-200">
           <form onSubmit={handleSave}>
-            <DialogHeader className="pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold shrink-0">
-                  <UserCog className="w-5 h-5" />
+            <DialogHeader className="pb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold shrink-0 bg-blue-100 text-blue-700">
+                  <UserCog className="w-4 h-4" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base font-bold text-slate-900">
-                    {editId ? 'แก้ไขข้อมูลพนักงาน (ผู้ใช้ระบบ)' : 'เพิ่มพนักงาน (ผู้ใช้งานระบบใหม่)'}
+                  <DialogTitle className="text-sm font-bold text-slate-900">
+                    {editId ? 'แก้ไขข้อมูลผู้ใช้งาน' : 'เพิ่มผู้ใช้งานระบบใหม่'}
                   </DialogTitle>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    กำหนดบทบาทและสิทธิ์ในการเข้าถึงระบบ Checklist
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    กำหนดบัญชีล็อกอินและระดับสิทธิ์การเข้าถึงข้อมูล
                   </p>
                 </div>
               </div>
             </DialogHeader>
 
-            <div className="space-y-4 py-3">
-              {/* ชื่อ - นามสกุล */}
-              <div className="space-y-1.5">
-                <Label htmlFor="user_name" className="text-xs font-semibold text-slate-700">
-                  ชื่อ - นามสกุล <span className="text-rose-500">*</span>
-                </Label>
+            <div className="space-y-2.5 py-2 text-xs">
+              {/* Full Name */}
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-slate-700">ชื่อ - นามสกุล *</Label>
                 <Input
-                  id="user_name"
                   value={formData.full_name}
                   onChange={e => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
                   placeholder="เช่น นายสมศักดิ์ ปลอดภัย"
                   required
-                  className="h-10 bg-white"
+                  className="h-8 text-xs bg-white border-slate-300 font-medium text-slate-900"
                   autoFocus
                 />
               </div>
 
-              {/* อีเมลผู้ใช้ */}
-              <div className="space-y-1.5">
+              {/* Email */}
+              <div className="space-y-1">
                 <Label htmlFor="user_email" className="text-xs font-semibold text-slate-700">
-                  อีเมล (Login Account) <span className="text-rose-500">*</span>
+                  อีเมล (Login Account) *
                 </Label>
                 <Input
                   id="user_email"
@@ -668,46 +545,44 @@ export default function EmployeesPage() {
                   onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="เช่น somsak@company.com"
                   required
-                  className="h-10 bg-white"
+                  className="h-8 text-xs bg-white border-slate-300 text-slate-900"
                 />
               </div>
 
               {/* Role Selection */}
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <Label className="text-xs font-semibold text-slate-700">
-                  สิทธิ์การใช้งาน (Role) <span className="text-rose-500">*</span>
+                  สิทธิ์การใช้งาน (Role) *
                 </Label>
-                <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-1.5">
                   {(['admin', 'supervisor', 'viewer'] as const).map(r => {
                     const cfg = ROLE_CONFIG[r]
                     const Icon = cfg.icon
                     const isSelected = formData.role === r
 
                     return (
-                      <div
+                      <button
                         key={r}
+                        type="button"
                         onClick={() => setFormData(prev => ({ ...prev, role: r }))}
-                        className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5 ${
+                        className={`p-1.5 rounded-lg border text-left cursor-pointer transition-all flex flex-col items-center gap-1 ${
                           isSelected
-                            ? 'border-2 border-blue-600 bg-blue-50/70 text-slate-900 shadow-xs'
+                            ? 'border-2 border-blue-600 bg-blue-50 text-blue-900 font-bold shadow-2xs'
                             : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${cfg.bg} ${cfg.color}`}>
-                          <Icon className="w-4 h-4" />
+                        <div className={`w-5 h-5 rounded flex items-center justify-center ${cfg.bg} ${cfg.color}`}>
+                          <Icon className="w-3 h-3" />
                         </div>
-                        <div className="flex-1">
-                          <p className="font-bold text-slate-900">{cfg.label}</p>
-                          <p className="text-[11px] text-slate-500 leading-tight mt-0.5">{cfg.desc}</p>
-                        </div>
-                      </div>
+                        <span className="text-[11px] leading-tight text-center">{cfg.label.split(' ')[0]}</span>
+                      </button>
                     )
                   })}
                 </div>
               </div>
 
-              {/* แผนก / สังกัด */}
-              <div className="space-y-1.5">
+              {/* Department */}
+              <div className="space-y-1">
                 <Label htmlFor="user_dept" className="text-xs font-semibold text-slate-700">
                   แผนก / สังกัด
                 </Label>
@@ -716,12 +591,12 @@ export default function EmployeesPage() {
                   value={formData.department}
                   onChange={e => setFormData(prev => ({ ...prev, department: e.target.value }))}
                   placeholder="เช่น ฝ่ายความปลอดภัย (จป.), วิศวกรรม..."
-                  className="h-10 bg-white"
+                  className="h-8 text-xs bg-white border-slate-300 text-slate-900"
                 />
               </div>
 
-              {/* เบอร์โทรศัพท์ */}
-              <div className="space-y-1.5">
+              {/* Phone */}
+              <div className="space-y-1">
                 <Label htmlFor="user_phone" className="text-xs font-semibold text-slate-700">
                   เบอร์โทรศัพท์ติดต่อ
                 </Label>
@@ -730,7 +605,7 @@ export default function EmployeesPage() {
                   value={formData.phone}
                   onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                   placeholder="เช่น 089-123-4567"
-                  className="h-10 bg-white"
+                  className="h-8 text-xs bg-white border-slate-300 text-slate-900"
                   type="tel"
                 />
               </div>
@@ -738,25 +613,25 @@ export default function EmployeesPage() {
               {/* Active Toggle */}
               <label
                 htmlFor="user_active"
-                className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-slate-50 cursor-pointer transition-all mt-1"
+                className="flex items-center justify-between p-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-all"
               >
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <Checkbox
                     id="user_active"
                     checked={formData.is_active}
                     onCheckedChange={v => setFormData(prev => ({ ...prev, is_active: !!v }))}
                   />
                   <div>
-                    <p className="text-xs font-bold text-slate-800">เปิดสถานะพร้อมปฏิบัติงาน (Active Status)</p>
-                    <p className="text-[11px] text-slate-400">บัญชีที่เปิดใช้งานจะสามารถเข้าสู่ระบบและบันทึกงานได้</p>
+                    <p className="text-xs font-semibold text-slate-800">เปิดสถานะพร้อมปฏิบัติงาน (Active)</p>
+                    <p className="text-[10px] text-slate-400">สามารถเข้าสู่ระบบและบันทึกงานได้</p>
                   </div>
                 </div>
                 <Badge
                   variant="outline"
                   className={
                     formData.is_active
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold'
-                      : 'bg-slate-100 text-slate-500 text-xs'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]'
+                      : 'bg-slate-100 text-slate-500 text-[10px]'
                   }
                 >
                   {formData.is_active ? 'Active' : 'Inactive'}
@@ -764,24 +639,26 @@ export default function EmployeesPage() {
               </label>
             </div>
 
-            <DialogFooter className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <DialogFooter className="pt-2.5 border-t border-slate-100 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => setDialogOpen(false)}
                 disabled={saving}
-                className="h-10 px-4 bg-white text-slate-700 border-slate-200 hover:bg-slate-50 font-medium"
+                className="h-8 px-3 text-xs bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
               >
                 ยกเลิก
               </Button>
               <Button
                 type="submit"
+                size="sm"
                 disabled={saving}
-                className="h-10 px-6 font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
+                className="h-8 px-4 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 shadow-2xs"
               >
                 {saving ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> กำลังบันทึก...
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> กำลังบันทึก...
                   </>
                 ) : (
                   editId ? 'บันทึกการแก้ไข' : 'เพิ่มผู้ใช้งาน'

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { AppSidebar, AppHeader } from '@/components/layout'
+import { AppHeader } from '@/components/layout'
 
 import type { UserRole } from '@/lib/types'
 
@@ -36,16 +36,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const initials = displayName.substring(0, 2).toUpperCase()
 
   return (
-    <div className="app-layout">
-      <AppSidebar
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-slate-100">
+      <AppHeader
         role={role}
         initials={initials}
         email={user.email ?? ''}
         name={displayName}
       />
-      <div className="app-main">
-        <AppHeader user={user} profile={profile} />
-        <main className="page-content pb-20 md:pb-6">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+        <main className="page-content flex-1 flex flex-col min-h-0 p-2 sm:p-2.5 overflow-hidden">
           {children}
         </main>
       </div>

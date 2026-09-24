@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS public.contractors (
   employee_type TEXT NOT NULL DEFAULT 'contractor' CHECK (employee_type IN ('employee', 'contractor')),
   position TEXT,
   phone TEXT,
+  daily_wage NUMERIC,
+  alc_risk BOOLEAN DEFAULT false,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT timezone('utc', now()) NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT timezone('utc', now()) NOT NULL

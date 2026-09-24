@@ -19,7 +19,7 @@ interface NavItem {
   icon: React.ElementType
   roles?: UserRole[]
   section: string
-  color: string
+  iconBg: string
   badge?: string
 }
 
@@ -30,7 +30,7 @@ const navItems: NavItem[] = [
     href: '/dashboard',
     icon: LayoutDashboard,
     section: 'เมนูหลัก',
-    color: 'text-sky-400 group-hover:text-sky-300',
+    iconBg: 'bg-sky-50 text-sky-600 border border-sky-200/70',
   },
   {
     label: 'Checklist วันนี้',
@@ -38,7 +38,7 @@ const navItems: NavItem[] = [
     href: '/checklist',
     icon: ClipboardCheck,
     section: 'เมนูหลัก',
-    color: 'text-emerald-400 group-hover:text-emerald-300',
+    iconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-200/70',
     badge: 'LIVE',
   },
   {
@@ -47,7 +47,7 @@ const navItems: NavItem[] = [
     href: '/history',
     icon: History,
     section: 'เมนูหลัก',
-    color: 'text-amber-400 group-hover:text-amber-300',
+    iconBg: 'bg-amber-50 text-amber-600 border border-amber-200/70',
   },
   {
     label: 'ผู้รับเหมา / ช่างหน้างาน',
@@ -55,7 +55,7 @@ const navItems: NavItem[] = [
     href: '/contractors',
     icon: HardHat,
     section: 'ข้อมูลระบบ (Master Data)',
-    color: 'text-orange-400 group-hover:text-orange-300',
+    iconBg: 'bg-amber-50 text-amber-700 border border-amber-200/70',
   },
   {
     label: 'พนักงาน (ผู้ใช้งานระบบ)',
@@ -63,7 +63,7 @@ const navItems: NavItem[] = [
     href: '/employees',
     icon: UserCheck,
     section: 'ข้อมูลระบบ (Master Data)',
-    color: 'text-indigo-400 group-hover:text-indigo-300',
+    iconBg: 'bg-blue-50 text-blue-600 border border-blue-200/70',
   },
   {
     label: 'กิจกรรมและสถานที่',
@@ -71,7 +71,7 @@ const navItems: NavItem[] = [
     href: '/activities',
     icon: Layers,
     section: 'ข้อมูลระบบ (Master Data)',
-    color: 'text-purple-400 group-hover:text-purple-300',
+    iconBg: 'bg-purple-50 text-purple-600 border border-purple-200/70',
   },
   {
     label: 'บริษัท / แผนก',
@@ -80,14 +80,14 @@ const navItems: NavItem[] = [
     icon: Building2,
     roles: ['admin'],
     section: 'ข้อมูลระบบ (Master Data)',
-    color: 'text-teal-400 group-hover:text-teal-300',
+    iconBg: 'bg-teal-50 text-teal-600 border border-teal-200/70',
   },
 ]
 
 const roleLabel: Record<UserRole, { label: string; badgeCls: string }> = {
-  admin: { label: 'ผู้ดูแลระบบ (Admin)', badgeCls: 'bg-purple-900/60 text-purple-300 border-purple-700/50' },
-  supervisor: { label: 'หัวหน้างาน (Supervisor)', badgeCls: 'bg-blue-900/60 text-blue-300 border-blue-700/50' },
-  viewer: { label: 'ผู้ตรวจสอบ (Viewer)', badgeCls: 'bg-slate-800 text-slate-300 border-slate-700' },
+  admin: { label: 'ผู้ดูแลระบบ (Admin)', badgeCls: 'bg-purple-50 text-purple-700 border-purple-200' },
+  supervisor: { label: 'หัวหน้างาน (Supervisor)', badgeCls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  viewer: { label: 'ผู้ตรวจสอบ (Viewer)', badgeCls: 'bg-slate-100 text-slate-700 border-slate-200' },
 }
 
 interface AppSidebarProps {
@@ -115,37 +115,37 @@ export function AppSidebar({ role, initials = '?', email = '', name = '' }: AppS
 
   return (
     <>
-      {/* ── Desktop Sidebar ── */}
-      <aside className="hidden md:flex flex-col w-68 shrink-0 bg-slate-900 border-r border-slate-800/80 h-screen sticky top-0 z-40 select-none">
+      {/* ── Desktop Sidebar (Light Theme Matching Content) ── */}
+      <aside className="hidden md:flex flex-col w-64 shrink-0 bg-white border-r border-slate-300 h-screen sticky top-0 z-40 select-none shadow-2xs">
         
         {/* Logo Brand Header */}
-        <div className="h-16 px-5 flex items-center gap-3 border-b border-slate-800/80 bg-slate-950/40">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-indigo-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0 ring-2 ring-white/10">
-            <ShieldCheck className="w-5 h-5 text-white" />
+        <div className="h-14 px-4 flex items-center gap-2.5 border-b border-slate-200 bg-slate-50/70 shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+            <ShieldCheck className="w-4 h-4 text-white" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-base font-extrabold text-white tracking-tight">SiteCheck</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+              <span className="text-sm font-extrabold text-slate-900 tracking-tight">SiteCheck</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200">
                 PRO
               </span>
             </div>
-            <p className="text-[11px] font-medium text-slate-400 truncate">
+            <p className="text-[10px] font-medium text-slate-500 truncate">
               ระบบตรวจสอบเข้า-ออกโครงการ
             </p>
           </div>
         </div>
 
         {/* Navigation List */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+        <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4 scrollbar-thin">
           {sections.map(section => (
-            <div key={section} className="space-y-1.5">
-              <div className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-blue-400" />
-                {section}
+            <div key={section} className="space-y-1">
+              <div className="px-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5 text-blue-500" />
+                <span>{section}</span>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {visibleItems.filter(i => i.section === section).map(item => {
                   const Icon = item.icon
                   const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -155,22 +155,22 @@ export function AppSidebar({ role, initials = '?', email = '', name = '' }: AppS
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        'group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative',
+                        'group flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg transition-all relative border',
                         isActive
-                          ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-600/30 ring-1 ring-blue-400/30'
-                          : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                          ? 'bg-blue-600 text-white font-semibold shadow-2xs border-blue-600'
+                          : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 border-transparent hover:border-slate-200/60'
                       )}
                     >
                       {/* Icon Box */}
                       <div
                         className={cn(
-                          'w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all',
+                          'w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-all text-xs',
                           isActive
-                            ? 'bg-white/20 text-white shadow-inner'
-                            : cn('bg-slate-800/90 group-hover:bg-slate-700/80', item.color)
+                            ? 'bg-white/20 text-white'
+                            : item.iconBg
                         )}
                       >
-                        <Icon className="w-4 h-4 transition-transform group-hover:scale-110" />
+                        <Icon className="w-3.5 h-3.5" />
                       </div>
 
                       {/* Text info */}
@@ -178,16 +178,16 @@ export function AppSidebar({ role, initials = '?', email = '', name = '' }: AppS
                         <div className="flex items-center justify-between gap-1">
                           <p className={cn(
                             'text-xs tracking-tight truncate',
-                            isActive ? 'font-bold text-white' : 'font-medium text-slate-200 group-hover:text-white'
+                            isActive ? 'font-bold text-white' : 'font-semibold text-slate-800 group-hover:text-slate-900'
                           )}>
                             {item.label}
                           </p>
                           {item.badge && (
                             <span className={cn(
-                              'text-[10px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider',
+                              'text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider',
                               isActive
                                 ? 'bg-white text-blue-700'
-                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             )}>
                               {item.badge}
                             </span>
@@ -195,7 +195,7 @@ export function AppSidebar({ role, initials = '?', email = '', name = '' }: AppS
                         </div>
                         <p className={cn(
                           'text-[10px] truncate leading-tight mt-0.5',
-                          isActive ? 'text-blue-100 font-normal' : 'text-slate-400'
+                          isActive ? 'text-blue-100 font-normal' : 'text-slate-400 group-hover:text-slate-500'
                         )}>
                           {item.sublabel}
                         </p>
@@ -214,34 +214,34 @@ export function AppSidebar({ role, initials = '?', email = '', name = '' }: AppS
         </nav>
 
         {/* User Footer Profile */}
-        <div className="p-3 border-t border-slate-800/80 bg-slate-950/40">
-          <div className="p-2.5 rounded-xl bg-slate-800/70 border border-slate-700/60 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-md">
+        <div className="p-2.5 border-t border-slate-200 bg-slate-50/70 shrink-0">
+          <div className="p-2 rounded-lg bg-white border border-slate-200 shadow-2xs flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-md bg-blue-100 text-blue-700 border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">
+              <p className="text-xs font-bold text-slate-900 truncate">
                 {name || email.split('@')[0]}
               </p>
               <div className="flex items-center gap-1 mt-0.5">
-                <span className={cn('text-[10px] px-1.5 py-0.2 rounded border font-medium', roleInfo.badgeCls)}>
+                <span className={cn('text-[9px] px-1 py-0.2 rounded border font-semibold', roleInfo.badgeCls)}>
                   {roleInfo.label.split(' ')[0]}
                 </span>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0 cursor-pointer"
+              className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors shrink-0 cursor-pointer"
               title="ออกจากระบบ"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </aside>
 
-      {/* ── Mobile Bottom Navigation Bar ── */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-800 md:hidden flex items-center justify-around px-2 py-1.5 shadow-2xl">
+      {/* ── Mobile Bottom Navigation Bar (Light Theme) ── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 md:hidden flex items-center justify-around px-2 py-1 shadow-lg">
         {visibleItems.slice(0, 5).map(item => {
           const Icon = item.icon
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -251,23 +251,23 @@ export function AppSidebar({ role, initials = '?', email = '', name = '' }: AppS
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl transition-all text-[11px] font-medium min-w-14',
+                'flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-lg transition-all text-[10px] font-medium min-w-12',
                 isActive
-                  ? 'text-blue-400 font-bold'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'text-blue-600 font-bold'
+                  : 'text-slate-500 hover:text-slate-800'
               )}
             >
               <div
                 className={cn(
-                  'w-8 h-8 rounded-lg flex items-center justify-center transition-all',
+                  'w-7 h-7 rounded-md flex items-center justify-center transition-all',
                   isActive
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                    : 'bg-slate-800/80 text-slate-400'
+                    ? 'bg-blue-600 text-white shadow-2xs'
+                    : 'bg-slate-100 text-slate-600'
                 )}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-3.5 h-3.5" />
               </div>
-              <span className="text-[10px] truncate max-w-16 leading-tight">
+              <span className="text-[9px] truncate max-w-14 leading-tight">
                 {item.label.split(' ')[0]}
               </span>
             </Link>
