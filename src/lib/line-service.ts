@@ -1,4 +1,5 @@
-import type { ChecklistEntry, Contractor, Company } from '@/lib/types'
+import type { ChecklistEntry, Contractor, Company, Activity } from '@/lib/types'
+import { isAlcoholPassed } from '@/lib/types'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 
@@ -14,12 +15,25 @@ export interface MemberStatusDetail {
 
 export interface CompanySummary {
   companyName: string
+  companyCode?: string | null
+  activityName?: string | null
+  activityCode?: string | null
+  activityTag?: string | null
+  location?: string | null
   totalRegistered: number
   checkedInCount: number
   passedCount: number
   failedCount: number
+  alcCount: number
+  ppeFailedCount: number
   missingCount: number
-  lateOrRequests: { name: string; purpose: string; checkInTime?: string | null }[]
+  lateOrRequests: {
+    name: string
+    purpose: string
+    checkInTime?: string | null
+    location?: string | null
+    companyCode?: string | null
+  }[]
   failedMembers: { name: string; reason: string; checkInTime?: string | null }[]
   missingMembers: string[]
   checkedInMembers: { name: string; checkInTime?: string | null }[]
@@ -32,6 +46,8 @@ export interface DailyReportData {
   totalCheckedIn: number
   totalPassed: number
   totalFailed: number
+  totalAlcFailed: number
+  totalPpeFailed: number
   totalMissing: number
   companies: CompanySummary[]
 }
@@ -43,7 +59,8 @@ export function buildDailyReportData(
   dateStr: string,
   entries: ChecklistEntry[],
   contractors: Contractor[],
-  companies: Company[]
+  companies: Company[],
+  activities: Activity[] = []
 ): DailyReportData {
   // Map company names
   const companyMap = new Map<string, Contractor[]>()
@@ -67,20 +84,55 @@ export function buildDailyReportData(
   let totalCheckedIn = 0
   let totalPassed = 0
   let totalFailed = 0
+  let totalAlcFailed = 0
+  let totalPpeFailed = 0
   let totalMissing = 0
 
   Array.from(companyMap.entries()).forEach(([compName, members]) => {
     const regCount = members.length
     totalRegistered += regCount
 
+    const compObj = companies.find(c => c.name === compName || (c.code && c.code === compName))
+    const compEntries = dateEntries.filter(
+      e => e.company_name === compName || members.some(m => m.id === e.contractor_id || m.name === e.contractor_name)
+    )
+    const location = compEntries.find(e => e.location && e.location.trim())?.location?.trim() || ''
+
+    // ดึงชื่อกิจกรรมและรหัส (ทั้งรหัสกิจกรรม และรหัสสังกัด/บริษัท)
+    const rawActivityName = compEntries.find(e => e.activity_name && e.activity_name.trim())?.activity_name?.trim() || ''
+    const rawActivityId = compEntries.find(e => e.activity_id)?.activity_id
+    const actObj = activities.find(a => (rawActivityId && a.id === rawActivityId) || (rawActivityName && a.name === rawActivityName))
+
+    const actCode = actObj?.code ? actObj.code.trim() : ''
+    const compCode = compObj?.code ? compObj.code.trim() : ''
+    const code = actCode || compCode
+    const actName = rawActivityName || actObj?.name || ''
+
+    let activityTag = ''
+    if (actName && code) {
+      activityTag = `[${code}] ${actName}`
+    } else if (actName) {
+      activityTag = actName
+    } else if (code) {
+      activityTag = `[${code}]`
+    }
+
     const checkedIn: { name: string; checkInTime?: string | null }[] = []
-    const lateOrReqs: { name: string; purpose: string; checkInTime?: string | null }[] = []
+    const lateOrReqs: {
+      name: string
+      purpose: string
+      checkInTime?: string | null
+      location?: string | null
+      companyCode?: string | null
+    }[] = []
     const failedList: { name: string; reason: string; checkInTime?: string | null }[] = []
     const missingList: string[] = []
     const membersDetails: MemberStatusDetail[] = []
 
     let passedInComp = 0
     let failedInComp = 0
+    let alcFailedInComp = 0
+    let ppeFailedInComp = 0
 
     members.forEach(m => {
       const entry = dateEntries.find(
@@ -93,11 +145,17 @@ export function buildDailyReportData(
 
         // Check if has special purpose or late request
         if (entry.purpose && entry.purpose.trim()) {
-          lateOrReqs.push({ name: m.name, purpose: entry.purpose.trim(), checkInTime: timeStr })
+          lateOrReqs.push({
+            name: m.name,
+            purpose: entry.purpose.trim(),
+            checkInTime: timeStr,
+            location: entry.location?.trim() || location || '',
+            companyCode: compCode,
+          })
         }
 
         // Check if passed ALC and PPE
-        const isAlcPass = entry.alc_result === '0%'
+        const isAlcPass = isAlcoholPassed(entry.alc_result)
         const isPpePass =
           entry.ppe_helmet &&
           entry.ppe_vest &&
@@ -117,6 +175,9 @@ export function buildDailyReportData(
           })
         } else {
           failedInComp += 1
+          if (!isAlcPass) alcFailedInComp += 1
+          if (!isPpePass) ppeFailedInComp += 1
+
           const reasons: string[] = []
           if (!isAlcPass) reasons.push(`ALC ${entry.alc_result}`)
           if (!isPpePass) {
@@ -156,14 +217,23 @@ export function buildDailyReportData(
     totalCheckedIn += checkedCount
     totalPassed += passedInComp
     totalFailed += failedInComp
+    totalAlcFailed += alcFailedInComp
+    totalPpeFailed += ppeFailedInComp
     totalMissing += missingCount
 
     companySummaries.push({
       companyName: compName,
+      companyCode: compCode || null,
+      activityName: actName || null,
+      activityCode: code || null,
+      activityTag: activityTag || null,
+      location: location || null,
       totalRegistered: regCount,
       checkedInCount: checkedCount,
       passedCount: passedInComp,
       failedCount: failedInComp,
+      alcCount: alcFailedInComp,
+      ppeFailedCount: ppeFailedInComp,
       missingCount: missingCount,
       lateOrRequests: lateOrReqs,
       failedMembers: failedList,
@@ -179,6 +249,8 @@ export function buildDailyReportData(
     totalCheckedIn,
     totalPassed,
     totalFailed,
+    totalAlcFailed,
+    totalPpeFailed,
     totalMissing,
     companies: companySummaries.sort((a, b) => b.checkedInCount - a.checkedInCount),
   }
@@ -193,46 +265,62 @@ export function formatDailyLineMessage(report: DailyReportData): string {
     dText = format(new Date(report.date), 'EEEEที่ d MMMM yyyy', { locale: th })
   } catch {}
 
+  const totalRequests = report.companies.reduce((sum, c) => sum + c.lateOrRequests.length, 0)
   const lines: string[] = []
 
-  lines.push(`📋 [สรุปผล Checklist ประจำวัน]`)
+  lines.push(`📋 [การเข้า-ออก และตรวจสอบความปลอดภัยประจำวัน]`)
   lines.push(`📅 วัน${dText}`)
   lines.push(`────────────────`)
-  lines.push(`📊 ภาพรวมทั้งโครงการ:`)
-  lines.push(`• เข้างานแล้ว: ${report.totalCheckedIn} / ${report.totalRegistered} คน`)
-  lines.push(`• ผ่านเกณฑ์ 100%: ${report.totalPassed} คน`)
-  if (report.totalFailed > 0) {
-    lines.push(`• ❌ ไม่ผ่านเกณฑ์: ${report.totalFailed} คน`)
-  }
-  if (report.totalMissing > 0) {
-    lines.push(`• ⚠️ ขาด/ยังไม่ตรวจ: ${report.totalMissing} คน`)
-  }
+  lines.push(`ทีมงานรวม ${report.totalPassed} | ไม่มา ${report.totalMissing} | ประสงค์ ${totalRequests}`)
   lines.push(`────────────────`)
 
+  // 1. สรุปรายบริษัท
   report.companies.forEach(comp => {
-    lines.push(`🏢 บริษัท/สาขา: ${comp.companyName} (${comp.totalRegistered} คน)`)
-    lines.push(`  • เข้างาน: ${comp.checkedInCount} คน | ขาด: ${comp.missingCount} คน`)
-    lines.push(`  • ผ่าน: ${comp.passedCount} คน | ไม่ผ่าน: ${comp.failedCount} คน`)
-
-    comp.membersDetails.forEach(m => {
-      if (m.status === 'passed') {
-        const t = m.checkInTime ? ` (เข้า ${m.checkInTime} น.)` : ''
-        lines.push(`    - ${m.name}${t}: ✅ ผ่าน`)
-      } else if (m.status === 'failed') {
-        const t = m.checkInTime ? ` (เข้า ${m.checkInTime} น.)` : ''
-        lines.push(`    - ${m.name}${t}: ❌ ไม่ผ่าน [${m.failReason || 'ไม่ผ่านเกณฑ์'}]`)
-      } else {
-        lines.push(`    - ${m.name}: ⚠️ ขาด/ยังไม่เข้างาน`)
+    let actTag = comp.activityTag || ''
+    if (!actTag) {
+      if (comp.activityName && comp.companyCode) {
+        actTag = `[${comp.companyCode}] ${comp.activityName}`
+      } else if (comp.activityName) {
+        actTag = comp.activityName
+      } else if (comp.companyCode) {
+        actTag = `[${comp.companyCode}]`
       }
-    })
-
-    if (comp.lateOrRequests.length > 0) {
-      const reqDetails = comp.lateOrRequests.map(r => `${r.name} (${r.purpose})`).join(', ')
-      lines.push(`  📌 หมายเหตุ/แจ้งเวลา: [${reqDetails}]`)
     }
+    const actStr = actTag ? `  ${actTag}` : ''
+    const locStr = comp.location ? `  📍 ${comp.location}` : ''
+    
+    const stats: string[] = [`มา ${comp.passedCount}`]
+    if (comp.alcCount > 0) stats.push(`ALC ${comp.alcCount}`)
+    if (comp.ppeFailedCount > 0) stats.push(`ไม่ผ่าน ${comp.ppeFailedCount}`)
+    stats.push(`ไม่มา ${comp.missingCount}`)
+    if (comp.lateOrRequests.length > 0) stats.push(`แจ้งประสงค์ ${comp.lateOrRequests.length}`)
 
-    lines.push(``)
+    lines.push(`🏢 ${comp.companyName}${actStr}`)
+    lines.push(`   ${stats.join('  ')}${locStr}`)
   })
+  lines.push(`────────────────`)
+
+  // 2. รายการแจ้งความประสงค์
+  const allRequests = report.companies.flatMap(c =>
+    c.lateOrRequests.map(r => ({
+      name: r.name,
+      purpose: r.purpose,
+      checkInTime: r.checkInTime,
+      companyName: c.companyName,
+      companyCode: r.companyCode || c.companyCode || '',
+      location: r.location || c.location || '',
+    }))
+  )
+
+  if (allRequests.length > 0) {
+    lines.push(`📝 รายการแจ้งความประสงค์:`)
+    allRequests.forEach(r => {
+      const codeStr = r.companyCode ? ` [ ${r.companyCode} ]` : ''
+      const locStr = r.location ? ` | ${r.location}` : ''
+      lines.push(`• ${r.companyName}${codeStr}: ${r.name}  ${r.purpose}${locStr}`)
+    })
+    lines.push(`────────────────`)
+  }
 
   lines.push(`🕒 รายงานเมื่อ: ${format(new Date(), 'HH:mm น.')}`)
   lines.push(`🛡️ ระบบ SiteCheck PRO`)
@@ -241,7 +329,9 @@ export function formatDailyLineMessage(report: DailyReportData): string {
 }
 
 /**
- * สร้าง LINE Flex Message แยก Bubble แต่ละสาขา / บริษัท (Carousel)
+ * สร้าง LINE Flex Message:
+ * - Bubble 1: การเข้า-ออก และตรวจสอบความปลอดภัยประจำวัน (Frame 2)
+ * - Bubble 2: รายการแจ้งความประสงค์ (Frame 3)
  */
 export function buildDailyLineFlexMessage(report: DailyReportData): any {
   let dText = report.date
@@ -250,441 +340,456 @@ export function buildDailyLineFlexMessage(report: DailyReportData): any {
   } catch {}
 
   const currentTime = format(new Date(), 'HH:mm น.')
+  const totalRequests = report.companies.reduce((sum, c) => sum + c.lateOrRequests.length, 0)
 
-  // 1. Bubble ภาพรวม (Overview Bubble)
+  // ══════════════════════════════════════════════════════════════════════════
+  // Bubble 1: การเข้า-ออก และตรวจสอบความปลอดภัยประจำวัน (ตาม Frame 2)
+  // ══════════════════════════════════════════════════════════════════════════
+  const companyRows: any[] = []
+
+  report.companies.slice(0, 12).forEach((comp, idx) => {
+    let actTag = comp.activityTag || ''
+    if (!actTag) {
+      if (comp.activityName && comp.companyCode) {
+        actTag = `[${comp.companyCode}] ${comp.activityName}`
+      } else if (comp.activityName) {
+        actTag = comp.activityName
+      } else if (comp.companyCode) {
+        actTag = `[${comp.companyCode}]`
+      }
+    }
+
+    const statTextElements: any[] = [
+      {
+        type: 'text',
+        text: `มา ${comp.passedCount}`,
+        size: 'xs',
+        weight: 'bold',
+        color: '#16a34a',
+        flex: 0,
+      },
+    ]
+
+    if (comp.alcCount > 0) {
+      statTextElements.push({
+        type: 'text',
+        text: `ALC ${comp.alcCount}`,
+        size: 'xs',
+        weight: 'bold',
+        color: '#dc2626',
+        flex: 0,
+      })
+    }
+
+    if (comp.ppeFailedCount > 0) {
+      statTextElements.push({
+        type: 'text',
+        text: `ไม่ผ่าน ${comp.ppeFailedCount}`,
+        size: 'xs',
+        weight: 'bold',
+        color: '#dc2626',
+        flex: 0,
+      })
+    }
+
+    statTextElements.push({
+      type: 'text',
+      text: `ไม่มา ${comp.missingCount}`,
+      size: 'xs',
+      color: '#0f172a',
+      flex: 0,
+    })
+
+    if (comp.lateOrRequests.length > 0) {
+      statTextElements.push({
+        type: 'text',
+        text: `แจ้งประสงค์ ${comp.lateOrRequests.length}`,
+        size: 'xs',
+        color: '#2563eb',
+        flex: 0,
+      })
+    }
+
+    companyRows.push({
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'xs',
+      contents: [
+        // Line 1: Company Name (Left) | Activity / Code (Right)
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'text',
+              text: comp.companyName,
+              weight: 'bold',
+              size: 'sm',
+              color: '#0f172a',
+              flex: 5,
+              wrap: true,
+            },
+            ...(actTag
+              ? [
+                  {
+                    type: 'text',
+                    text: actTag,
+                    weight: 'bold',
+                    size: 'xs',
+                    color: '#2563eb',
+                    align: 'end',
+                    flex: 5,
+                    wrap: true,
+                  },
+                ]
+              : []),
+          ],
+        },
+        // Line 2: Attendance stats (Left) | Location (Right)
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'box',
+              layout: 'horizontal',
+              spacing: 'md',
+              flex: 7,
+              contents: statTextElements,
+            },
+            ...(comp.location
+              ? [
+                  {
+                    type: 'text',
+                    text: comp.location,
+                    size: 'xs',
+                    color: '#0f172a',
+                    align: 'end',
+                    flex: 3,
+                    wrap: true,
+                  },
+                ]
+              : []),
+          ],
+        },
+      ],
+    })
+
+    if (idx < Math.min(report.companies.length, 12) - 1) {
+      companyRows.push({
+        type: 'separator',
+        margin: 'md',
+      })
+    }
+  })
+
+  if (report.companies.length > 12) {
+    companyRows.push({
+      type: 'text',
+      text: `...และอีก ${report.companies.length - 12} บริษัท`,
+      size: 'xxs',
+      color: '#64748b',
+      align: 'center',
+      margin: 'sm',
+    })
+  }
+
   const overviewBubble = {
     type: 'bubble',
     size: 'mega',
     header: {
       type: 'box',
       layout: 'vertical',
-      backgroundColor: '#0f172a',
-      paddingAll: '16px',
+      backgroundColor: '#286b13',
+      paddingAll: '12px',
       contents: [
         {
-          type: 'box',
-          layout: 'horizontal',
-          contents: [
-            {
-              type: 'text',
-              text: '🛡️ SITECHECK SUMMARY',
-              weight: 'bold',
-              color: '#38bdf8',
-              size: 'xs',
-              flex: 1,
-            },
-            {
-              type: 'text',
-              text: dText,
-              color: '#94a3b8',
-              size: 'xs',
-              align: 'end',
-            },
-          ],
-        },
-        {
           type: 'text',
-          text: 'สรุปการเข้างานประจำวัน',
+          text: 'การเข้า-ออก และตรวจสอบความปลอดภัยประจำวัน',
           weight: 'bold',
           color: '#ffffff',
-          size: 'lg',
-          margin: 'xs',
+          size: 'xs',
+          wrap: true,
         },
       ],
     },
     body: {
       type: 'box',
       layout: 'vertical',
-      paddingAll: '16px',
+      paddingAll: '12px',
       spacing: 'md',
       contents: [
+        // 3 Summary Badges
         {
           type: 'box',
           layout: 'horizontal',
-          spacing: 'md',
+          spacing: 'sm',
           contents: [
             {
               type: 'box',
               layout: 'vertical',
-              backgroundColor: '#f0fdf4',
+              backgroundColor: '#dcfce7',
               cornerRadius: '8px',
-              paddingAll: '10px',
+              paddingAll: '8px',
               flex: 1,
-              contents: [
-                { type: 'text', text: 'เข้างานแล้ว', size: 'xxs', color: '#166534' },
-                {
-                  type: 'text',
-                  text: `${report.totalCheckedIn} / ${report.totalRegistered}`,
-                  weight: 'bold',
-                  size: 'lg',
-                  color: '#15803d',
-                },
-                { type: 'text', text: 'คน', size: 'xxs', color: '#166534' },
-              ],
-            },
-            {
-              type: 'box',
-              layout: 'vertical',
-              backgroundColor: report.totalFailed > 0 ? '#fef2f2' : '#f8fafc',
-              cornerRadius: '8px',
-              paddingAll: '10px',
-              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
               contents: [
                 {
                   type: 'text',
-                  text: 'ไม่ผ่านเกณฑ์',
-                  size: 'xxs',
-                  color: report.totalFailed > 0 ? '#991b1b' : '#64748b',
-                },
-                {
-                  type: 'text',
-                  text: `${report.totalFailed}`,
+                  text: `ทีมงานรวม ${report.totalPassed}`,
+                  size: 'xs',
+                  color: '#14532d',
                   weight: 'bold',
-                  size: 'lg',
-                  color: report.totalFailed > 0 ? '#dc2626' : '#334155',
-                },
-                {
-                  type: 'text',
-                  text: 'คน',
-                  size: 'xxs',
-                  color: report.totalFailed > 0 ? '#991b1b' : '#64748b',
+                  align: 'center',
                 },
               ],
             },
             {
               type: 'box',
               layout: 'vertical',
-              backgroundColor: report.totalMissing > 0 ? '#fffbeb' : '#f8fafc',
+              backgroundColor: '#fef3c7',
               cornerRadius: '8px',
-              paddingAll: '10px',
+              paddingAll: '8px',
               flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
               contents: [
                 {
                   type: 'text',
-                  text: 'ขาด / ไม่มา',
-                  size: 'xxs',
-                  color: report.totalMissing > 0 ? '#92400e' : '#64748b',
-                },
-                {
-                  type: 'text',
-                  text: `${report.totalMissing}`,
+                  text: `ไม่มา ${report.totalMissing}`,
+                  size: 'xs',
+                  color: '#92400e',
                   weight: 'bold',
-                  size: 'lg',
-                  color: report.totalMissing > 0 ? '#d97706' : '#334155',
+                  align: 'center',
                 },
+              ],
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#dbeafe',
+              cornerRadius: '8px',
+              paddingAll: '8px',
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              contents: [
                 {
                   type: 'text',
-                  text: 'คน',
-                  size: 'xxs',
-                  color: report.totalMissing > 0 ? '#92400e' : '#64748b',
+                  text: `ประสงค์ ${totalRequests}`,
+                  size: 'xs',
+                  color: '#1e40af',
+                  weight: 'bold',
+                  align: 'center',
                 },
               ],
             },
           ],
         },
+
+        // Company Rows
         {
           type: 'box',
           layout: 'vertical',
-          margin: 'sm',
-          contents: [
-            {
-              type: 'text',
-              text: `🏢 รวมทั้งหมด ${report.companies.length} บริษัท/สาขา`,
-              size: 'xs',
-              color: '#475569',
-              weight: 'bold',
-            },
-            {
-              type: 'text',
-              text: '👉 เลื่อนดูสรุปแยกแต่ละสาขาด้านขวา',
-              size: 'xxs',
-              color: '#0284c7',
-              margin: 'xs',
-            },
-          ],
+          spacing: 'md',
+          margin: 'md',
+          contents: companyRows,
         },
       ],
     },
     footer: {
       type: 'box',
       layout: 'vertical',
-      paddingAll: '12px',
+      paddingAll: '10px',
       backgroundColor: '#f8fafc',
       contents: [
         {
           type: 'text',
-          text: `อัปเดตข้อมูล: ${currentTime}`,
+          text: `รายงานเมื่อ: ${currentTime} วันที่ ${dText}`,
           size: 'xxs',
-          color: '#94a3b8',
+          color: '#64748b',
           align: 'center',
         },
       ],
     },
   }
 
-  // 2. Bubble แยกแต่ละบริษัท / สาขา
-  const companyBubbles = report.companies.slice(0, 11).map(comp => {
-    // Header style depending on pass/fail
-    let headerBg = '#1e293b'
-    let badgeBg = '#334155'
-    let statusText = 'ปกติ'
+  // ══════════════════════════════════════════════════════════════════════════
+  // Bubble 2: รายการแจ้งความประสงค์ (ตาม Frame 3)
+  // ══════════════════════════════════════════════════════════════════════════
+  const allRequests = report.companies.flatMap(c =>
+    c.lateOrRequests.map(r => ({
+      name: r.name,
+      purpose: r.purpose,
+      checkInTime: r.checkInTime,
+      companyName: c.companyName,
+      companyCode: r.companyCode || c.companyCode || '',
+      location: r.location || c.location || '',
+    }))
+  )
 
-    if (comp.failedCount > 0) {
-      headerBg = '#991b1b' // Red tone
-      badgeBg = '#dc2626'
-      statusText = `ไม่ผ่าน ${comp.failedCount} คน`
-    } else if (comp.missingCount > 0) {
-      headerBg = '#0369a1' // Blue/Sky tone
-      badgeBg = '#0284c7'
-      statusText = `ขาด ${comp.missingCount} คน`
-    } else if (comp.checkedInCount === comp.totalRegistered && comp.totalRegistered > 0) {
-      headerBg = '#15803d' // Green tone
-      badgeBg = '#16a34a'
-      statusText = 'มาครบ 100%'
-    }
+  const requestRows: any[] = []
 
-    // List of contractor items inside bubble
-    const memberRows: any[] = comp.membersDetails.slice(0, 8).map(m => {
-      let iconColor = '#16a34a'
-      let statusLabel = '✅ ผ่าน'
-      let subInfo = m.checkInTime ? `เข้า ${m.checkInTime} น.` : ''
+  if (allRequests.length === 0) {
+    requestRows.push({
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#f0fdf4',
+      cornerRadius: '8px',
+      paddingAll: '16px',
+      alignItems: 'center',
+      contents: [
+        {
+          type: 'text',
+          text: '✅ ทุกคนเข้าปฏิบัติงานตามปกติ',
+          size: 'sm',
+          weight: 'bold',
+          color: '#15803d',
+        },
+        {
+          type: 'text',
+          text: 'ไม่มีผู้แจ้งความประสงค์พิเศษในวันนี้',
+          size: 'xs',
+          color: '#166534',
+          margin: 'xs',
+        },
+      ],
+    })
+  } else {
+    allRequests.slice(0, 10).forEach((r, idx) => {
+      const compLabel = r.companyCode
+        ? `${r.companyName} [ ${r.companyCode} ]`
+        : r.companyName
 
-      if (m.status === 'failed') {
-        iconColor = '#dc2626'
-        statusLabel = `❌ ${m.failReason || 'ไม่ผ่าน'}`
-      } else if (m.status === 'missing') {
-        iconColor = '#f59e0b'
-        statusLabel = '⚠️ ขาด/ไม่มา'
-        subInfo = ''
-      }
-
-      return {
+      requestRows.push({
         type: 'box',
-        layout: 'horizontal',
-        spacing: 'sm',
-        margin: 'xs',
+        layout: 'vertical',
+        spacing: 'xs',
         contents: [
-          {
-            type: 'text',
-            text: m.name,
-            size: 'xs',
-            color: '#1e293b',
-            weight: 'bold',
-            flex: 4,
-            wrap: true,
-          },
+          // Row 1: Company [ Code ] (Left) | สถานที่ (Right)
           {
             type: 'box',
-            layout: 'vertical',
-            flex: 5,
+            layout: 'horizontal',
             contents: [
               {
                 type: 'text',
-                text: statusLabel,
-                size: 'xxs',
-                color: iconColor,
+                text: compLabel,
                 weight: 'bold',
+                size: 'sm',
+                color: '#0f172a',
+                flex: 7,
                 wrap: true,
               },
-              ...(subInfo
-                ? [
-                    {
-                      type: 'text',
-                      text: subInfo,
-                      size: 'xxs',
-                      color: '#64748b',
-                    },
-                  ]
-                : []),
+              {
+                type: 'text',
+                text: 'สถานที่',
+                weight: 'bold',
+                size: 'sm',
+                color: '#0f172a',
+                align: 'end',
+                flex: 3,
+              },
+            ],
+          },
+          // Row 2: Worker Name + Purpose (Left) | Location (Right)
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              {
+                type: 'text',
+                text: `${r.name}   ${r.purpose}`,
+                size: 'xs',
+                color: '#0f172a',
+                flex: 7,
+                wrap: true,
+              },
+              {
+                type: 'text',
+                text: r.location || '-',
+                size: 'xs',
+                color: '#0f172a',
+                align: 'end',
+                flex: 3,
+                wrap: true,
+              },
             ],
           },
         ],
+      })
+
+      if (idx < Math.min(allRequests.length, 10) - 1) {
+        requestRows.push({
+          type: 'separator',
+          margin: 'md',
+        })
       }
     })
 
-    if (comp.membersDetails.length > 8) {
-      memberRows.push({
+    if (allRequests.length > 10) {
+      requestRows.push({
         type: 'text',
-        text: `...และอีก ${comp.membersDetails.length - 8} คน`,
+        text: `...และอีก ${allRequests.length - 10} รายการ`,
         size: 'xxs',
         color: '#64748b',
         align: 'center',
         margin: 'xs',
       })
     }
+  }
 
-    // Late/notes if any
-    const notesContents: any[] = []
-    if (comp.lateOrRequests.length > 0) {
-      notesContents.push({
-        type: 'box',
-        layout: 'vertical',
-        backgroundColor: '#fefce8',
-        paddingAll: '8px',
-        cornerRadius: '6px',
-        margin: 'sm',
-        contents: [
-          {
-            type: 'text',
-            text: `⏰ แจ้งเวลา/หมายเหตุ (${comp.lateOrRequests.length} คน):`,
-            size: 'xxs',
-            color: '#854d0e',
-            weight: 'bold',
-          },
-          ...comp.lateOrRequests.slice(0, 3).map(r => ({
-            type: 'text',
-            text: `• ${r.name}: ${r.purpose}${r.checkInTime ? ` (${r.checkInTime} น.)` : ''}`,
-            size: 'xxs',
-            color: '#713f12',
-            wrap: true,
-          })),
-        ],
-      })
-    }
+  const requestsBubble = {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#e0f2fe',
+      paddingAll: '12px',
+      contents: [
+        {
+          type: 'text',
+          text: 'รายการแจ้งความประสงค์',
+          weight: 'bold',
+          color: '#0f172a',
+          size: 'sm',
+        },
+      ],
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      paddingAll: '12px',
+      spacing: 'md',
+      contents: requestRows,
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      paddingAll: '10px',
+      backgroundColor: '#f8fafc',
+      contents: [
+        {
+          type: 'text',
+          text: `รายงานเมื่อ: ${currentTime} วันที่ ${dText}`,
+          size: 'xxs',
+          color: '#64748b',
+          align: 'center',
+        },
+      ],
+    },
+  }
 
-    return {
-      type: 'bubble',
-      size: 'mega',
-      header: {
-        type: 'box',
-        layout: 'vertical',
-        backgroundColor: headerBg,
-        paddingAll: '14px',
-        contents: [
-          {
-            type: 'box',
-            layout: 'horizontal',
-            contents: [
-              {
-                type: 'text',
-                text: '🏢 บริษัท / สาขา',
-                color: '#e2e8f0',
-                size: 'xxs',
-                flex: 1,
-              },
-              {
-                type: 'text',
-                text: statusText,
-                color: '#ffffff',
-                size: 'xxs',
-                weight: 'bold',
-                align: 'end',
-              },
-            ],
-          },
-          {
-            type: 'text',
-            text: comp.companyName,
-            weight: 'bold',
-            color: '#ffffff',
-            size: 'md',
-            wrap: true,
-            margin: 'xs',
-          },
-        ],
-      },
-      body: {
-        type: 'box',
-        layout: 'vertical',
-        paddingAll: '14px',
-        contents: [
-          // Stat chips
-          {
-            type: 'box',
-            layout: 'horizontal',
-            spacing: 'xs',
-            contents: [
-              {
-                type: 'box',
-                layout: 'vertical',
-                backgroundColor: '#f1f5f9',
-                paddingAll: '6px',
-                cornerRadius: '4px',
-                flex: 1,
-                alignItems: 'center',
-                contents: [
-                  { type: 'text', text: 'ทั้งหมด', size: 'xxs', color: '#64748b' },
-                  { type: 'text', text: `${comp.totalRegistered}`, weight: 'bold', size: 'xs', color: '#0f172a' },
-                ],
-              },
-              {
-                type: 'box',
-                layout: 'vertical',
-                backgroundColor: '#f0fdf4',
-                paddingAll: '6px',
-                cornerRadius: '4px',
-                flex: 1,
-                alignItems: 'center',
-                contents: [
-                  { type: 'text', text: 'เข้างาน', size: 'xxs', color: '#166534' },
-                  { type: 'text', text: `${comp.checkedInCount}`, weight: 'bold', size: 'xs', color: '#15803d' },
-                ],
-              },
-              {
-                type: 'box',
-                layout: 'vertical',
-                backgroundColor: comp.failedCount > 0 ? '#fef2f2' : '#f8fafc',
-                paddingAll: '6px',
-                cornerRadius: '4px',
-                flex: 1,
-                alignItems: 'center',
-                contents: [
-                  { type: 'text', text: 'ไม่ผ่าน', size: 'xxs', color: comp.failedCount > 0 ? '#991b1b' : '#64748b' },
-                  { type: 'text', text: `${comp.failedCount}`, weight: 'bold', size: 'xs', color: comp.failedCount > 0 ? '#dc2626' : '#334155' },
-                ],
-              },
-              {
-                type: 'box',
-                layout: 'vertical',
-                backgroundColor: comp.missingCount > 0 ? '#fffbeb' : '#f8fafc',
-                paddingAll: '6px',
-                cornerRadius: '4px',
-                flex: 1,
-                alignItems: 'center',
-                contents: [
-                  { type: 'text', text: 'ขาด', size: 'xxs', color: comp.missingCount > 0 ? '#92400e' : '#64748b' },
-                  { type: 'text', text: `${comp.missingCount}`, weight: 'bold', size: 'xs', color: comp.missingCount > 0 ? '#d97706' : '#334155' },
-                ],
-              },
-            ],
-          },
-          {
-            type: 'separator',
-            margin: 'md',
-          },
-          {
-            type: 'box',
-            layout: 'vertical',
-            margin: 'sm',
-            contents: memberRows,
-          },
-          ...notesContents,
-        ],
-      },
-      footer: {
-        type: 'box',
-        layout: 'vertical',
-        paddingAll: '10px',
-        backgroundColor: '#f8fafc',
-        contents: [
-          {
-            type: 'text',
-            text: `วันที่ ${dText} • ${currentTime}`,
-            size: 'xxs',
-            color: '#94a3b8',
-            align: 'center',
-          },
-        ],
-      },
-    }
-  })
+  // Carousel 2 bubbles: Bubble 1 (การเข้า-ออกและตรวจสอบความปลอดภัยประจำวัน) + Bubble 2 (รายการแจ้งความประสงค์)
+  const totalBubbles = [overviewBubble, requestsBubble]
 
   return {
     type: 'flex',
     altText: `📋 สรุปรายการเช็คชื่อประจำวัน (${dText})`,
     contents: {
       type: 'carousel',
-      contents: [overviewBubble, ...companyBubbles],
+      contents: totalBubbles,
     },
   }
 }

@@ -40,18 +40,20 @@ async function handleCronSend(req: NextRequest) {
 
     // Query today's data from Supabase
     const supabase = await createClient()
-    const [{ data: entries }, { data: contractors }, { data: companies }] =
+    const [{ data: entries }, { data: contractors }, { data: companies }, { data: activities }] =
       await Promise.all([
         supabase.from('checklist_entries').select('*').eq('entry_date', todayStr),
         supabase.from('contractors').select('*').eq('is_active', true).order('name'),
         supabase.from('companies').select('*').order('name'),
+        supabase.from('activities').select('*').eq('is_active', true).order('name'),
       ])
 
     const report = buildDailyReportData(
       todayStr,
       entries ?? [],
       contractors ?? [],
-      companies ?? []
+      companies ?? [],
+      activities ?? []
     )
 
     const textMsg = formatDailyLineMessage(report)

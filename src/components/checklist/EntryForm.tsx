@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { ChecklistEntryFormData, Contractor, Activity } from '@/lib/types'
+import { isAlcoholFailed } from '@/lib/types'
 import { format } from 'date-fns'
 
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ import {
   Plus, X, Layers, Wrench, Check
 } from 'lucide-react'
 import Link from 'next/link'
+import { PURPOSE_PRESETS } from './QuickTeamChecklist'
 
 interface EntryFormProps {
   entryId?: string
@@ -310,14 +312,20 @@ export function EntryForm({ entryId, defaultDate }: EntryFormProps) {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="purpose" className="text-xs font-semibold text-slate-700">ประสงค์</Label>
+                  <Label htmlFor="purpose" className="text-xs font-semibold text-slate-700">แจ้งความประสงค์</Label>
                   <Input
                     id="purpose"
+                    list="entry-form-purpose-list"
                     value={formData.purpose ?? ''}
                     onChange={e => setFormData(prev => ({ ...prev, purpose: e.target.value }))}
-                    placeholder="เช่น เอก, ขาด..."
+                    placeholder="เช่น ไม่มา, ขอเข้า 09:00..."
                     className="h-10"
                   />
+                  <datalist id="entry-form-purpose-list">
+                    {PURPOSE_PRESETS.map(p => (
+                      <option key={p} value={p} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
             </CardContent>
@@ -367,8 +375,8 @@ export function EntryForm({ entryId, defaultDate }: EntryFormProps) {
                   <ActivityIcon className="w-4 h-4" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-bold text-slate-800">กิจกรรมและสถานที่</CardTitle>
-                  <p className="text-[11px] text-slate-500">เลือกกิจกรรมที่เข้าปฏิบัติงานจากระบบ</p>
+                  <CardTitle className="text-sm font-semibold text-slate-800">กิจกรรมและสถานที่</CardTitle>
+                  <p className="text-xs text-slate-500 font-normal">เลือกกิจกรรมที่เข้าปฏิบัติงานจากระบบ</p>
                 </div>
               </div>
             </CardHeader>
@@ -432,18 +440,18 @@ export function EntryForm({ entryId, defaultDate }: EntryFormProps) {
               </div>
             </CardHeader>
             <CardContent className="p-5">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2 mb-3">
                 {(['0%', '>0%', 'ไม่ได้ตรวจ'] as const).map(v => (
                   <button
                     key={v}
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, alc_result: v }))}
-                    className={`px-3 py-2.5 rounded-lg text-sm font-bold border transition-all ${
+                    className={`px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
                       formData.alc_result === v
                         ? v === '>0%'
-                          ? 'bg-rose-600 text-white border-rose-600 shadow-sm shadow-rose-500/25 ring-2 ring-rose-200'
+                          ? 'bg-rose-600 text-white border-rose-600 shadow-sm ring-2 ring-rose-200'
                           : v === '0%'
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-500/25 ring-2 ring-emerald-200'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-200'
                           : 'bg-slate-700 text-white border-slate-700 shadow-sm ring-2 ring-slate-200'
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white hover:border-slate-300'
                     }`}
@@ -452,10 +460,20 @@ export function EntryForm({ entryId, defaultDate }: EntryFormProps) {
                   </button>
                 ))}
               </div>
-              {formData.alc_result === '>0%' && (
+              <div className="space-y-1">
+                <Label htmlFor="custom-alc" className="text-xs text-slate-600 font-normal">หรือพิมพ์ระบุค่า ALC โดยตรง:</Label>
+                <Input
+                  id="custom-alc"
+                  placeholder="เช่น 0.02%, 0"
+                  value={formData.alc_result}
+                  onChange={e => setFormData(prev => ({ ...prev, alc_result: e.target.value }))}
+                  className="font-mono text-xs"
+                />
+              </div>
+              {isAlcoholFailed(formData.alc_result) && (
                 <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2.5">
                   <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <p className="text-xs text-rose-700 font-semibold">พบแอลกอฮอล์! ต้องปฏิบัติตามกฎความปลอดภัย</p>
+                  <p className="text-xs text-rose-700 font-semibold">พบแอลกอฮอล์! ({formData.alc_result}) ต้องปฏิบัติตามกฎความปลอดภัย</p>
                 </div>
               )}
             </CardContent>

@@ -12,7 +12,7 @@ import { QuickTeamChecklist } from '@/components/checklist/QuickTeamChecklist'
 import {
   Plus, Search, RefreshCw, LayoutGrid, TableProperties,
   ChevronLeft, ChevronRight, CalendarDays, AlertTriangle,
-  Zap, FileText, MessageSquare
+  Zap, FileText, MessageSquare, Smartphone
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -82,7 +82,8 @@ export default function ChecklistPage() {
               }`}
             >
               <Zap className={`w-3.5 h-3.5 ${activeTab === 'team' ? 'text-amber-500 fill-amber-400' : 'text-slate-500'}`} />
-              <span>ตรวจ Checklist ตามสังกัด</span>
+              <span className="hidden sm:inline">ตรวจ Checklist ตามสังกัด</span>
+              <span className="sm:hidden">ตรวจตามสังกัด</span>
             </button>
 
             <button
@@ -94,7 +95,8 @@ export default function ChecklistPage() {
               }`}
             >
               <FileText className={`w-3.5 h-3.5 ${activeTab === 'list' ? 'text-blue-700' : 'text-slate-500'}`} />
-              <span>รายการบันทึก ({entries.length})</span>
+              <span className="hidden sm:inline">รายการบันทึก ({entries.length})</span>
+              <span className="sm:hidden">บันทึกแล้ว ({entries.length})</span>
             </button>
           </div>
 

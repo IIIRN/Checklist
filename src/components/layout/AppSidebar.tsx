@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import {
   LayoutDashboard, ClipboardCheck, History, HardHat,
   UserCheck, Layers, Building2, LogOut, ShieldCheck,
-  ChevronRight, Sparkles
+  ChevronRight, Sparkles, Smartphone
 } from 'lucide-react'
 import type { UserRole } from '@/lib/types'
 
@@ -40,6 +40,15 @@ const navItems: NavItem[] = [
     section: 'เมนูหลัก',
     iconBg: 'bg-emerald-50 text-emerald-600 border border-emerald-200/70',
     badge: 'LIVE',
+  },
+  {
+    label: 'Checklist มือถือ (3 สเตป)',
+    sublabel: 'โหมดตรวจเร็วแยกตามสังกัด',
+    href: '/checklist-m',
+    icon: Smartphone,
+    section: 'เมนูหลัก',
+    iconBg: 'bg-blue-50 text-blue-600 border border-blue-200/70',
+    badge: 'MOBILE',
   },
   {
     label: 'ประวัติการตรวจ',

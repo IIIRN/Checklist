@@ -7,6 +7,7 @@ import {
   Calendar, Check, ShieldCheck, Zap, MessageSquare
 } from 'lucide-react'
 import Link from 'next/link'
+import { isAlcoholFailed } from '@/lib/types'
 
 async function getDashboardData(today: string) {
   const supabase = await createClient()
@@ -21,7 +22,7 @@ async function getDashboardData(today: string) {
     total: list.length,
     active: list.filter(e => e.status === 'active').length,
     out: list.filter(e => e.status === 'checked_out').length,
-    alc: list.filter(e => e.alc_result === '>0%').length,
+    alc: list.filter(e => isAlcoholFailed(e.alc_result)).length,
     ppeIncomplete: list.filter(e => !e.ppe_helmet || !e.ppe_vest || !e.ppe_shirt || !e.ppe_gloves || !e.ppe_shoes).length,
     black: list.filter(e => e.is_blacklisted).length,
     recent: list.slice(0, 15),

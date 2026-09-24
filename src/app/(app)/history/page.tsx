@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { ChecklistEntry } from '@/lib/types'
+import { isAlcoholFailed } from '@/lib/types'
 import { format, subDays, startOfMonth, endOfMonth } from 'date-fns'
 
 import { ChecklistTable } from '@/components/checklist/ChecklistTable'
@@ -69,7 +70,7 @@ export default function HistoryPage() {
   }
 
   const totalDays = [...new Set(entries.map(e => e.entry_date))].length
-  const alcFailCount = entries.filter(e => e.alc_result === '>0%').length
+  const alcFailCount = entries.filter(e => isAlcoholFailed(e.alc_result)).length
   const blackCount = entries.filter(e => e.is_blacklisted).length
 
   return (

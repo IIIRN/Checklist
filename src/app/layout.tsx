@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="th" suppressHydrationWarning>
+    <html lang="th" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={`${notoSansThai.variable} ${sarabun.variable} font-sans antialiased`}>
         <TooltipProvider>
           {children}

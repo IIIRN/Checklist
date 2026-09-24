@@ -70,7 +70,61 @@ export interface Activity {
   created_at: string
 }
 
-export type ALCResult = '0%' | '>0%' | 'ไม่ได้ตรวจ'
+export const COMMON_TASK_PRESETS = [
+  'งานปูกระเบื้อง',
+  'งานฝ้าเพดาน',
+  'งานก่ออิฐฉาบปูน',
+  'งานทาสี',
+  'งานระบบไฟฟ้า',
+  'งานเชื่อมโครงสร้าง',
+  'งานประปา / สุขาภิบาล',
+  'งานโครงสร้างเหล็ก',
+  'งานเทคอนกรีต',
+  'งานติดตั้งกระจก/อะลูมิเนียม',
+  'งานติดตั้งแอร์',
+  'งานกันซึม / หลังคา',
+  'งานทั่วไป',
+]
+
+export const PURPOSE_PRESETS = [
+  'ไม่มา',
+  'ขอเข้า 08:30',
+  'ขอเข้า 09:00',
+  'ขอเข้า 09:30',
+  'ขอเข้า 10:00',
+  'ขอออกก่อนเวลา (16:00)',
+  'ขอทำงานล่วงเวลา (OT ถึง 20:00)',
+  'ขอทำงานกะดึก',
+  'เข้าปฏิบัติงานตามปกติ',
+]
+
+export type ALCResult = string // e.g. '0', '>0', 'ไม่ได้ตรวจ', '0.02%', etc.
+
+export const isAlcoholPassed = (val?: string | null): boolean => {
+  if (!val) return true
+  const trimmed = val.trim()
+  if (!trimmed || trimmed === '0%' || trimmed === '0' || trimmed === '0.00' || trimmed === '0.00%' || trimmed === 'ไม่ได้ตรวจ') return true
+  const num = parseFloat(trimmed.replace(/[%mg]/gi, '').trim())
+  if (!isNaN(num)) return num === 0
+  return trimmed === '0%'
+}
+
+export const isAlcoholFailed = (val?: string | null): boolean => {
+  if (!val) return false
+  const trimmed = val.trim()
+  if (!trimmed || trimmed === 'ไม่ได้ตรวจ') return false
+  return !isAlcoholPassed(val)
+}
+
+export const normalizeAlcForDb = (val?: string | null): string => {
+  if (!val) return '0%'
+  const trimmed = val.trim()
+  if (!trimmed || trimmed === '0' || trimmed === '0%' || trimmed === '0.00' || trimmed === '0.00%') return '0%'
+  if (trimmed === 'ไม่ได้ตรวจ') return 'ไม่ได้ตรวจ'
+  if (isAlcoholFailed(trimmed)) return '>0%'
+  return '0%'
+}
+
 export type EntryStatus = 'active' | 'checked_out' | 'cancelled'
 
 export interface ChecklistEntry {

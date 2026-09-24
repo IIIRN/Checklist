@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
-import type { ChecklistEntry, Contractor, Company } from '@/lib/types'
+import type { ChecklistEntry, Contractor, Company, Activity } from '@/lib/types'
 import {
   buildDailyReportData,
   formatDailyLineMessage,
@@ -64,6 +64,7 @@ export default function LineOAPage() {
   const [entries, setEntries] = useState<ChecklistEntry[]>([])
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
+  const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -115,20 +116,23 @@ export default function LineOAPage() {
     else setRefreshing(true)
 
     try {
-      const [{ data: eData, error: eErr }, { data: cData, error: cErr }, { data: coData, error: coErr }] =
+      const [{ data: eData, error: eErr }, { data: cData, error: cErr }, { data: coData, error: coErr }, { data: aData, error: aErr }] =
         await Promise.all([
           supabase.from('checklist_entries').select('*').eq('entry_date', date),
           supabase.from('contractors').select('*').eq('is_active', true).order('name'),
           supabase.from('companies').select('*').order('name'),
+          supabase.from('activities').select('*').eq('is_active', true).order('name'),
         ])
 
       if (eErr) throw eErr
       if (cErr) throw cErr
       if (coErr) throw coErr
+      if (aErr) throw aErr
 
       setEntries(eData ?? [])
       setContractors(cData ?? [])
       setCompanies(coData ?? [])
+      setActivities(aData ?? [])
     } catch (err: unknown) {
       console.error('Fetch report data error:', err)
       toast.error('ไม่สามารถโหลดข้อมูลได้')
@@ -153,8 +157,8 @@ export default function LineOAPage() {
 
   // Computed Report Data
   const report: DailyReportData = useMemo(() => {
-    return buildDailyReportData(date, entries, contractors, companies)
-  }, [date, entries, contractors, companies])
+    return buildDailyReportData(date, entries, contractors, companies, activities)
+  }, [date, entries, contractors, companies, activities])
 
   // Computed LINE Flex Message
   const flexMessage = useMemo(() => {
@@ -602,15 +606,8 @@ export default function LineOAPage() {
                 displayCompanies.map((comp, idx) => (
                   <div
                     key={idx}
-                    onClick={() => {
-                      const cIdx = report.companies.findIndex(c => c.companyName === comp.companyName)
-                      if (cIdx !== -1) setActiveBubbleIdx(cIdx + 1)
-                    }}
-                    className={`p-3 rounded-lg border cursor-pointer transition-all flex flex-col gap-2 ${
-                      activeBubbleIdx === idx + 1
-                        ? 'border-emerald-500 bg-emerald-50/30 ring-1 ring-emerald-500'
-                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/70'
-                    }`}
+                    onClick={() => setActiveBubbleIdx(0)}
+                    className="p-3 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-slate-100/70 transition-all flex flex-col gap-2"
                   >
                     {/* Company Header */}
                     <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
@@ -621,9 +618,6 @@ export default function LineOAPage() {
                         <div>
                           <span className="font-bold text-sm text-slate-950">
                             {comp.companyName}
-                          </span>
-                          <span className="text-[10px] text-slate-500 ml-1.5 font-medium">
-                            (คลิกเพื่อดู Flex Bubble)
                           </span>
                         </div>
                       </div>
@@ -710,7 +704,7 @@ export default function LineOAPage() {
               </div>
               <div>
                 <p className="text-xs font-bold tracking-tight text-slate-100">
-                  {formatMode === 'flex' ? 'LINE Flex Carousel (แยก Bubble แต่ละสาขา)' : 'LINE ข้อความ Text'}
+                  {formatMode === 'flex' ? 'LINE Flex Carousel (แยกตาม Bubble)' : 'LINE ข้อความ Text'}
                 </p>
                 <p className="text-[10px] text-slate-400">Live Preview จำลองการแสดงผลจริง</p>
               </div>
@@ -742,7 +736,6 @@ export default function LineOAPage() {
               </button>
             </div>
           </div>
-
           {/* Carousel Navigation Bar (When in Flex mode) */}
           {formatMode === 'flex' && (
             <div className="px-3 py-1.5 bg-slate-800 border-b border-slate-700 flex items-center justify-between text-white text-xs shrink-0">
@@ -756,11 +749,11 @@ export default function LineOAPage() {
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <span className="font-bold text-xs text-emerald-400">
-                  Bubble {activeBubbleIdx + 1} / {report.companies.length + 1}
+                  Bubble {activeBubbleIdx + 1} / 2
                 </span>
                 <button
-                  disabled={activeBubbleIdx >= report.companies.length}
-                  onClick={() => setActiveBubbleIdx(prev => Math.min(report.companies.length, prev + 1))}
+                  disabled={activeBubbleIdx >= 1}
+                  onClick={() => setActiveBubbleIdx(prev => Math.min(1, prev + 1))}
                   className="p-1 rounded hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none"
                   title="Bubble ถัดไป"
                 >
@@ -768,31 +761,28 @@ export default function LineOAPage() {
                 </button>
               </div>
 
-              {/* Bubble Tab Chips */}
+              {/* Bubble Tab Chips: 2 Bubbles only */}
               <div className="flex items-center gap-1 overflow-x-auto max-w-[280px] scrollbar-none py-0.5">
                 <button
                   onClick={() => setActiveBubbleIdx(0)}
-                  className={`px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap transition-colors ${
+                  className={`px-2.5 py-0.5 rounded text-[11px] font-bold whitespace-nowrap transition-colors ${
                     activeBubbleIdx === 0
                       ? 'bg-emerald-500 text-white'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
-                  ภาพรวม
+                  🏢 ยอดเข้างาน
                 </button>
-                {report.companies.map((c, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveBubbleIdx(i + 1)}
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap transition-colors ${
-                      activeBubbleIdx === i + 1
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    {c.companyName}
-                  </button>
-                ))}
+                <button
+                  onClick={() => setActiveBubbleIdx(1)}
+                  className={`px-2.5 py-0.5 rounded text-[11px] font-bold whitespace-nowrap transition-colors ${
+                    activeBubbleIdx === 1
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  📝 แจ้งความประสงค์
+                </button>
               </div>
             </div>
           )}
@@ -811,148 +801,181 @@ export default function LineOAPage() {
             {formatMode === 'flex' ? (
               <div className="w-full max-w-[340px] my-2 transition-all">
                 
-                {/* ── 1. Overview Bubble (idx 0) ── */}
-                {activeBubbleIdx === 0 && (
-                  <div className="bg-white rounded-2xl overflow-hidden shadow-xl border border-slate-300 flex flex-col">
-                    {/* Header */}
-                    <div className="bg-slate-900 text-white p-3.5 flex flex-col gap-0.5">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-extrabold text-sky-400 tracking-wider">🛡️ SITECHECK SUMMARY</span>
-                        <span className="text-slate-400 text-[10px]">{format(new Date(date), 'd MMM yyyy', { locale: th })}</span>
-                      </div>
-                      <h4 className="text-base font-bold text-white mt-1">สรุปการเข้างานประจำวัน</h4>
-                    </div>
-
-                    {/* Body */}
-                    <div className="p-3.5 space-y-3 bg-white">
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2">
-                          <p className="text-[10px] font-medium text-emerald-800">เข้างานแล้ว</p>
-                          <p className="text-lg font-black text-emerald-700">{report.totalCheckedIn} / {report.totalRegistered}</p>
-                          <p className="text-[9px] text-emerald-800">คน</p>
-                        </div>
-                        <div className={`rounded-lg p-2 border ${report.totalFailed > 0 ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
-                          <p className={`text-[10px] font-medium ${report.totalFailed > 0 ? 'text-red-800' : 'text-slate-600'}`}>ไม่ผ่านเกณฑ์</p>
-                          <p className={`text-lg font-black ${report.totalFailed > 0 ? 'text-red-600' : 'text-slate-700'}`}>{report.totalFailed}</p>
-                          <p className="text-[9px] text-slate-500">คน</p>
-                        </div>
-                        <div className={`rounded-lg p-2 border ${report.totalMissing > 0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
-                          <p className={`text-[10px] font-medium ${report.totalMissing > 0 ? 'text-amber-800' : 'text-slate-600'}`}>ขาด / ไม่มา</p>
-                          <p className={`text-lg font-black ${report.totalMissing > 0 ? 'text-amber-600' : 'text-slate-700'}`}>{report.totalMissing}</p>
-                          <p className="text-[9px] text-slate-500">คน</p>
-                        </div>
+                {/* ── 1. Overview Bubble (idx 0): การเข้า-ออก และตรวจสอบความปลอดภัยประจำวัน (Frame 2) ── */}
+                {activeBubbleIdx === 0 && (() => {
+                  const totalRequests = report.companies.reduce((sum, c) => sum + c.lateOrRequests.length, 0)
+                  return (
+                    <div className="bg-white rounded-2xl overflow-hidden shadow-xl border border-slate-300 flex flex-col">
+                      {/* Header */}
+                      <div className="bg-[#286b13] text-white px-3.5 py-2.5 flex items-center justify-center text-center">
+                        <h4 className="text-xs font-bold text-white leading-normal">
+                          การเข้า-ออก และตรวจสอบความปลอดภัยประจำวัน
+                        </h4>
                       </div>
 
-                      <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 flex flex-col gap-1">
-                        <span className="text-xs font-bold text-slate-800">
-                          🏢 รวมทั้งหมด {report.companies.length} บริษัท / สาขา
-                        </span>
-                        <p className="text-[11px] text-blue-600 font-medium">
-                          👉 กดปุ่มลูกศรหรือเลือกชื่อสาขาด้านบนเพื่อดูรายละเอียด
-                        </p>
+                      {/* Body */}
+                      <div className="p-3 space-y-3 bg-white">
+                        {/* 3 Summary Badges */}
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="bg-[#dcfce7] rounded-lg p-2 flex items-center justify-center">
+                            <p className="text-xs font-bold text-[#14532d]">
+                              ทีมงานรวม {report.totalPassed}
+                            </p>
+                          </div>
+                          <div className="bg-[#fef3c7] rounded-lg p-2 flex items-center justify-center">
+                            <p className="text-xs font-bold text-[#92400e]">
+                              ไม่มา {report.totalMissing}
+                            </p>
+                          </div>
+                          <div className="bg-[#dbeafe] rounded-lg p-2 flex items-center justify-center">
+                            <p className="text-xs font-bold text-[#1e40af]">
+                              ประสงค์ {totalRequests}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Company list */}
+                        <div className="space-y-2.5 pt-0.5">
+                          {report.companies.map((c, i) => {
+                            let actTag = c.activityTag || ''
+                            if (!actTag) {
+                              if (c.activityName && c.companyCode) actTag = `[${c.companyCode}] ${c.activityName}`
+                              else if (c.activityName) actTag = c.activityName
+                              else if (c.companyCode) actTag = `[${c.companyCode}]`
+                            }
+
+                            return (
+                              <div key={i} className="space-y-1">
+                                {/* Line 1: Company Name & Activity / Code */}
+                                <div className="flex items-center justify-between text-xs gap-1">
+                                  <span className="font-bold text-slate-900 truncate flex-1 text-left">
+                                    {c.companyName}
+                                  </span>
+                                  {actTag && (
+                                    <span className="font-bold text-blue-700 text-[11px] truncate flex-1 text-right">
+                                      {actTag}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Line 2: Stats & Location */}
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-1.5 text-[11px] flex-wrap">
+                                    <span className="font-bold text-emerald-700">
+                                      มา {c.passedCount}
+                                    </span>
+                                    {c.alcCount > 0 && (
+                                      <span className="font-bold text-red-600">
+                                        ALC {c.alcCount}
+                                      </span>
+                                    )}
+                                    {c.ppeFailedCount > 0 && (
+                                      <span className="font-bold text-red-600">
+                                        ไม่ผ่าน {c.ppeFailedCount}
+                                      </span>
+                                    )}
+                                    <span className="text-slate-800">
+                                      ไม่มา {c.missingCount}
+                                    </span>
+                                    {c.lateOrRequests.length > 0 && (
+                                      <span className="text-blue-700 font-medium">
+                                        แจ้งประสงค์ {c.lateOrRequests.length}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-slate-800 text-[11px] text-right truncate max-w-[110px]">
+                                    {c.location || '-'}
+                                  </span>
+                                </div>
+
+                                {i < report.companies.length - 1 && (
+                                  <hr className="border-slate-100 my-1" />
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="bg-slate-50 p-2 text-center text-[10px] text-slate-500 border-t border-slate-200">
+                        รายงานเมื่อ: {format(new Date(), 'HH:mm น.')} วันที่ {format(new Date(date), 'd MMM yyyy', { locale: th })}
                       </div>
                     </div>
+                  )
+                })()}
 
-                    {/* Footer */}
-                    <div className="bg-slate-50 p-2 text-center text-[10px] text-slate-400 border-t border-slate-200">
-                      อัปเดตข้อมูล ณ เวลา {format(new Date(), 'HH:mm น.')}
-                    </div>
-                  </div>
-                )}
-
-                {/* ── 2. Company / Branch Bubble (idx 1..N) ── */}
-                {activeBubbleIdx > 0 && report.companies[activeBubbleIdx - 1] && (() => {
-                  const comp = report.companies[activeBubbleIdx - 1]
-                  let headerBg = 'bg-slate-800'
-                  let badgeText = 'ปกติ'
-
-                  if (comp.failedCount > 0) {
-                    headerBg = 'bg-red-800'
-                    badgeText = `ไม่ผ่าน ${comp.failedCount} คน`
-                  } else if (comp.missingCount > 0) {
-                    headerBg = 'bg-sky-800'
-                    badgeText = `ขาด ${comp.missingCount} คน`
-                  } else if (comp.checkedInCount === comp.totalRegistered && comp.totalRegistered > 0) {
-                    headerBg = 'bg-emerald-800'
-                    badgeText = 'มาครบ 100%'
-                  }
+                {/* ── 2. Requests Bubble (idx 1): รายการแจ้งความประสงค์ (Frame 3) ── */}
+                {activeBubbleIdx === 1 && (() => {
+                  const allRequests = report.companies.flatMap(c =>
+                    c.lateOrRequests.map(r => ({
+                      name: r.name,
+                      purpose: r.purpose,
+                      checkInTime: r.checkInTime,
+                      companyName: c.companyName,
+                      companyCode: r.companyCode || c.companyCode || '',
+                      location: r.location || c.location || '',
+                    }))
+                  )
 
                   return (
                     <div className="bg-white rounded-2xl overflow-hidden shadow-xl border border-slate-300 flex flex-col">
                       {/* Header */}
-                      <div className={`${headerBg} text-white p-3 flex flex-col gap-0.5`}>
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-slate-300 text-[10px]">🏢 บริษัท / สาขา</span>
-                          <span className="px-1.5 py-0.5 rounded bg-white/20 text-white font-bold text-[10px]">
-                            {badgeText}
-                          </span>
-                        </div>
-                        <h4 className="text-sm font-bold text-white mt-0.5 leading-snug">{comp.companyName}</h4>
+                      <div className="bg-[#e0f2fe] px-3.5 py-2.5 flex items-center justify-center text-center">
+                        <h4 className="text-xs font-bold text-slate-900">
+                          รายการแจ้งความประสงค์
+                        </h4>
                       </div>
 
-                      {/* Stat chips */}
-                      <div className="p-3 bg-white space-y-2.5">
-                        <div className="grid grid-cols-4 gap-1 text-center">
-                          <div className="bg-slate-100 rounded p-1 border border-slate-200">
-                            <span className="text-[9px] text-slate-600 block">ทั้งหมด</span>
-                            <span className="text-xs font-bold text-slate-900">{comp.totalRegistered}</span>
+                      {/* Body */}
+                      <div className="p-3 space-y-3 bg-white">
+                        {allRequests.length === 0 ? (
+                          <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 text-center space-y-1">
+                            <p className="text-xs font-bold text-emerald-800">✅ ทุกคนเข้าปฏิบัติงานตามปกติ</p>
+                            <p className="text-[11px] text-emerald-600">ไม่มีผู้แจ้งความประสงค์พิเศษในวันนี้</p>
                           </div>
-                          <div className="bg-emerald-50 rounded p-1 border border-emerald-200">
-                            <span className="text-[9px] text-emerald-700 block">เข้างาน</span>
-                            <span className="text-xs font-bold text-emerald-800">{comp.checkedInCount}</span>
-                          </div>
-                          <div className={`rounded p-1 border ${comp.failedCount > 0 ? 'bg-red-50 border-red-200 text-red-700' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
-                            <span className="text-[9px] block">ไม่ผ่าน</span>
-                            <span className="text-xs font-bold">{comp.failedCount}</span>
-                          </div>
-                          <div className={`rounded p-1 border ${comp.missingCount > 0 ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
-                            <span className="text-[9px] block">ขาด</span>
-                            <span className="text-xs font-bold">{comp.missingCount}</span>
-                          </div>
-                        </div>
+                        ) : (
+                          <div className="space-y-3 max-h-[360px] overflow-y-auto">
+                            {allRequests.map((r, i) => {
+                              const compLabel = r.companyCode
+                                ? `${r.companyName} [ ${r.companyCode} ]`
+                                : r.companyName
 
-                        {/* Member Status Rows */}
-                        <div className="border-t border-slate-200 pt-2 space-y-1">
-                          {comp.membersDetails.map((m, mIdx) => (
-                            <div key={mIdx} className="flex items-center justify-between text-xs py-0.5 border-b border-slate-100 last:border-none">
-                              <span className="font-bold text-slate-800 truncate max-w-[150px]">{m.name}</span>
-                              <div className="text-right">
-                                {m.status === 'passed' && (
-                                  <span className="text-[11px] font-bold text-emerald-700">
-                                    ✅ {m.checkInTime ? `เข้า ${m.checkInTime} น.` : 'ผ่าน'}
-                                  </span>
-                                )}
-                                {m.status === 'failed' && (
-                                  <span className="text-[11px] font-bold text-red-600">
-                                    ❌ {m.failReason || 'ไม่ผ่าน'} {m.checkInTime ? `(${m.checkInTime})` : ''}
-                                  </span>
-                                )}
-                                {m.status === 'missing' && (
-                                  <span className="text-[11px] font-bold text-amber-700">
-                                    ⚠️ ขาด/ไม่มา
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                              return (
+                                <div key={i} className="space-y-1">
+                                  {/* Row 1: Company [ Code ] (Left) | สถานที่ (Right) */}
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-bold text-slate-900 truncate max-w-[190px]">
+                                      {compLabel}
+                                    </span>
+                                    <span className="font-bold text-slate-900 text-right">
+                                      สถานที่
+                                    </span>
+                                  </div>
 
-                        {/* Notes / Special requests */}
-                        {comp.lateOrRequests.length > 0 && (
-                          <div className="bg-amber-50/80 border border-amber-200 rounded-md p-2 text-[11px] text-amber-900">
-                            <span className="font-bold block">⏰ แจ้งเวลาเข้า/หมายเหตุ:</span>
-                            {comp.lateOrRequests.map((r, rIdx) => (
-                              <p key={rIdx} className="mt-0.5">
-                                • {r.name}: {r.purpose} {r.checkInTime ? `(${r.checkInTime} น.)` : ''}
-                              </p>
-                            ))}
+                                  {/* Row 2: Worker Name + Purpose (Left) | Location (Right) */}
+                                  <div className="flex items-center justify-between text-xs text-slate-800">
+                                    <span className="truncate max-w-[190px]">
+                                      {r.name}   {r.purpose}
+                                    </span>
+                                    <span className="text-right truncate max-w-[100px]">
+                                      {r.location || '-'}
+                                    </span>
+                                  </div>
+
+                                  {i < allRequests.length - 1 && (
+                                    <hr className="border-slate-100 my-1.5" />
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         )}
                       </div>
 
                       {/* Footer */}
-                      <div className="bg-slate-50 p-2 text-center text-[10px] text-slate-400 border-t border-slate-200">
-                        {format(new Date(date), 'd MMM yyyy', { locale: th })} • {format(new Date(), 'HH:mm น.')}
+                      <div className="bg-slate-50 p-2 text-center text-[10px] text-slate-500 border-t border-slate-200">
+                        รายงานเมื่อ: {format(new Date(), 'HH:mm น.')} วันที่ {format(new Date(date), 'd MMM yyyy', { locale: th })}
                       </div>
                     </div>
                   )

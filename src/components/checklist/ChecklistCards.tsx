@@ -8,7 +8,7 @@ import {
   HardHat, CheckCircle2, XCircle, AlertTriangle, Shield,
 } from 'lucide-react'
 import Link from 'next/link'
-import { getContractorAlcRisk } from '@/lib/types'
+import { getContractorAlcRisk, isAlcoholFailed } from '@/lib/types'
 
 /* ── PPE compact ── */
 const PPEStrip = ({ entry }: { entry: ChecklistEntry }) => {
@@ -25,13 +25,13 @@ const PPEStrip = ({ entry }: { entry: ChecklistEntry }) => {
       <div style={{ display: 'flex', gap: 3 }}>
         {items.map(i => (
           <span key={i.label} title={i.label} style={{
-            width: 8, height: 8, borderRadius: '50%',
+            width: 10, height: 10, borderRadius: '50%',
             background: i.v ? 'hsl(142 72% 29%)' : 'hsl(var(--c-border-2))',
           }} />
         ))}
       </div>
       <span style={{
-        fontSize: 10, fontWeight: 800, lineHeight: 1,
+        fontSize: 12, fontWeight: 400, lineHeight: 1,
         color: pass === 5 ? 'hsl(142 72% 29%)' : pass >= 3 ? 'hsl(34 90% 38%)' : 'hsl(0 72% 50%)',
       }}>
         {pass}/5
@@ -54,12 +54,12 @@ export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsPro
         {[...Array(6)].map((_, i) => (
           <div key={i} className="card p-4" style={{ opacity: 0.5 }}>
             <div style={{
-              height: 12, width: '60%', borderRadius: 4,
+              height: 14, width: '60%', borderRadius: 4,
               background: 'hsl(var(--c-border))', marginBottom: 8,
               animation: 'pulse 1.5s ease infinite',
             }} />
             <div style={{
-              height: 10, width: '40%', borderRadius: 4,
+              height: 12, width: '40%', borderRadius: 4,
               background: 'hsl(var(--c-border))',
             }} />
           </div>
@@ -75,7 +75,7 @@ export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsPro
         justifyContent: 'center', padding: '64px 0', gap: 8,
       }}>
         <HardHat className="w-10 h-10" style={{ color: 'hsl(var(--c-border-2))' }} />
-        <p style={{ fontSize: 13, fontWeight: 600, color: 'hsl(var(--c-fg-4))' }}>ไม่พบรายการ</p>
+        <p style={{ fontSize: 13, fontWeight: 500, color: 'hsl(var(--c-fg-4))' }}>ไม่พบรายการ</p>
       </div>
     )
   }
@@ -84,7 +84,7 @@ export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsPro
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {entries.map((e, idx) => {
         const hasDanger = e.is_blacklisted
-        const hasWarn   = e.alc_result === '>0%' && !hasDanger
+        const hasWarn   = isAlcoholFailed(e.alc_result) && !hasDanger
 
         return (
           <div key={e.id}
@@ -103,7 +103,7 @@ export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsPro
                   width: 34, height: 34, borderRadius: 8, flexShrink: 0,
                   background: hasDanger ? 'hsl(0 72% 50%)' : 'hsl(var(--c-brand))',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: 13, fontWeight: 800,
+                  color: '#fff', fontSize: 13, fontWeight: 600,
                 }}>
                   {e.contractor_name.charAt(0)}
                 </div>
@@ -112,7 +112,7 @@ export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsPro
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <p style={{
                       fontSize: 13,
-                      fontWeight: 800,
+                      fontWeight: 500,
                       color: 'hsl(var(--c-fg))',
                       lineHeight: 1.2,
                       background: (getContractorAlcRisk(e.contractors) || e.notes?.includes('[เสี่ยง ALC]') || e.purpose?.includes('[เสี่ยง ALC]')) ? '#fef3c7' : undefined,
@@ -127,7 +127,7 @@ export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsPro
                       </span>
                     )}
                   </div>
-                  <p style={{ fontSize: 11, color: 'hsl(var(--c-fg-4))', lineHeight: 1.3 }}>
+                  <p style={{ fontSize: 12, color: 'hsl(var(--c-fg-4))', lineHeight: 1.3, fontWeight: 400 }}>
                     {e.company_name ?? '—'}
                   </p>
                 </div>
@@ -136,27 +136,27 @@ export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsPro
               {/* Info rows */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
                 {e.supervisor && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'hsl(var(--c-fg-3))' }}>
-                    <User className="w-3 h-3 shrink-0" style={{ color: 'hsl(var(--c-fg-4))' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'hsl(var(--c-fg-3))' }}>
+                    <User className="w-3.5 h-3.5 shrink-0" style={{ color: 'hsl(var(--c-fg-4))' }} />
                     ผู้ควบคุม:
-                    <span style={{ fontWeight: 600, color: 'hsl(var(--c-fg-2))' }}>{e.supervisor}</span>
+                    <span style={{ fontWeight: 400, color: 'hsl(var(--c-fg-2))' }}>{e.supervisor}</span>
                   </div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'hsl(var(--c-fg-3))' }}>
-                  <Clock className="w-3 h-3 shrink-0" style={{ color: 'hsl(var(--c-fg-4))' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'hsl(var(--c-fg-3))' }}>
+                  <Clock className="w-3.5 h-3.5 shrink-0" style={{ color: 'hsl(var(--c-fg-4))' }} />
                   เวลาตรวจ:
-                  <span style={{ fontWeight: 700, color: 'hsl(var(--c-fg))' }}>{e.check_in_time ?? '—'}</span>
+                  <span style={{ fontWeight: 400, color: 'hsl(var(--c-fg))' }}>{e.check_in_time ?? '—'}</span>
                 </div>
                 {e.activity_name && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11, color: 'hsl(var(--c-fg-3))' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, color: 'hsl(var(--c-fg-3))' }}>
                     <Zap className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: 'hsl(var(--c-fg-4))' }} />
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, flex: 1 }}>
                       {e.activity_name.split(',').map((act, i) => (
                         <span
                           key={i}
                           style={{
-                            fontSize: 10,
-                            fontWeight: 600,
+                            fontSize: 12,
+                            fontWeight: 400,
                             padding: '1px 6px',
                             borderRadius: 4,
                             background: '#f3e8ff',
@@ -168,7 +168,7 @@ export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsPro
                           {act.trim()}
                         </span>
                       ))}
-                      {e.location && <span style={{ color: 'hsl(var(--c-fg-4))', fontSize: 11, alignSelf: 'center' }}>· 📍 {e.location}</span>}
+                      {e.location && <span style={{ color: 'hsl(var(--c-fg-4))', fontSize: 12, alignSelf: 'center', fontWeight: 400 }}>· 📍 {e.location}</span>}
                     </div>
                   </div>
                 )}
@@ -181,31 +181,31 @@ export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsPro
                 borderBottom: '1px solid hsl(var(--c-border))',
                 flexWrap: 'wrap',
               }}>
-                <span className={`badge ${e.alc_result === '>0%' ? 'badge-alc-fail' : 'badge-alc-ok'}`}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  {e.alc_result === '>0%'
-                    ? <AlertTriangle className="w-3 h-3" />
-                    : <CheckCircle2 className="w-3 h-3" />}
+                <span className={`badge ${isAlcoholFailed(e.alc_result) ? 'badge-alc-fail' : 'badge-alc-ok'}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 400 }}>
+                  {isAlcoholFailed(e.alc_result)
+                    ? <AlertTriangle className="w-3.5 h-3.5" />
+                    : <CheckCircle2 className="w-3.5 h-3.5" />}
                   ALC {e.alc_result}
                 </span>
                 <PPEStrip entry={e} />
                 {e.noise_area && (
-                  <span className="badge badge-warn" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <Zap className="w-3 h-3" />พื้นที่เสียงดัง
+                  <span className="badge badge-warn" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 400 }}>
+                    <Zap className="w-3.5 h-3.5" />พื้นที่เสียงดัง
                   </span>
                 )}
               </div>
 
               {/* Wage */}
               {e.daily_wage && (
-                <div style={{ paddingTop: 8, fontSize: 11, color: 'hsl(var(--c-fg-3))' }}>
+                <div style={{ paddingTop: 8, fontSize: 12, color: 'hsl(var(--c-fg-3))' }}>
                   ค่าแรง:
-                  <span style={{ fontWeight: 800, color: 'hsl(var(--c-fg))', marginLeft: 6 }}>
+                  <span style={{ fontWeight: 400, color: 'hsl(var(--c-fg))', marginLeft: 6 }}>
                     ฿{e.daily_wage.toLocaleString()}
                   </span>
                   {e.meal_allowance && (
-                    <span className="badge badge-active" style={{ marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      <CheckCircle2 className="w-3 h-3" />เบี้ยเลี้ยง
+                    <span className="badge badge-active" style={{ marginLeft: 8, display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 400 }}>
+                      <CheckCircle2 className="w-3.5 h-3.5" />เบี้ยเลี้ยง
                     </span>
                   )}
                 </div>
@@ -217,7 +217,7 @@ export function ChecklistCards({ entries, loading, onDelete }: ChecklistCardsPro
                 paddingTop: 10, borderTop: '1px solid hsl(var(--c-border))',
               }}>
                 <Link href={`/checklist/${e.id}/edit`} style={{ flex: 1 }}>
-                  <button className="ctrl-btn" style={{ width: '100%', fontSize: 11 }}>
+                  <button className="ctrl-btn" style={{ width: '100%', fontSize: 12, fontWeight: 500 }}>
                     <Pencil className="w-3.5 h-3.5" />แก้ไข
                   </button>
                 </Link>

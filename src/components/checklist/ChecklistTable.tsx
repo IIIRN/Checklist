@@ -10,7 +10,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import Link from 'next/link'
-import { getContractorAlcRisk } from '@/lib/types'
+import { getContractorAlcRisk, isAlcoholPassed, isAlcoholFailed } from '@/lib/types'
 
 /* ── PPE Compact Dots with Labels ── */
 const PPECompact = ({ entry }: { entry: ChecklistEntry }) => {
@@ -30,7 +30,7 @@ const PPECompact = ({ entry }: { entry: ChecklistEntry }) => {
           <span
             key={idx}
             title={`${i.label}: ${i.v ? 'ผ่าน' : 'ไม่ผ่าน'}`}
-            className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold ${
+            className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-normal ${
               i.v
                 ? 'bg-emerald-600 text-white'
                 : 'bg-slate-300 text-slate-600'
@@ -41,7 +41,7 @@ const PPECompact = ({ entry }: { entry: ChecklistEntry }) => {
         ))}
       </div>
       <span
-        className={`text-[10px] font-bold font-mono px-1 rounded border ${
+        className={`text-xs font-normal font-mono px-1.5 py-0.5 rounded border ${
           pass === 5
             ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
             : pass >= 3
@@ -108,8 +108,8 @@ export function ChecklistTable({ entries, loading, onDelete, showDate = false }:
   if (!entries.length) return (
     <div className="card border border-slate-300 flex flex-col items-center justify-center py-14 gap-2 bg-white text-center">
       <HardHat className="w-8 h-8 text-slate-400" />
-      <p className="text-xs font-bold text-slate-800">ไม่พบรายการบันทึกในวันนี้</p>
-      <p className="text-[11px] text-slate-600">สามารถตรวจ Checklist ในแท็บ &quot;ตรวจ Checklist ตามสังกัด&quot; เพื่อบันทึกข้อมูล</p>
+      <p className="text-xs font-semibold text-slate-800">ไม่พบรายการบันทึกในวันนี้</p>
+      <p className="text-xs text-slate-600">สามารถตรวจ Checklist ในแท็บ &quot;ตรวจ Checklist ตามสังกัด&quot; เพื่อบันทึกข้อมูล</p>
     </div>
   )
 
@@ -118,30 +118,30 @@ export function ChecklistTable({ entries, loading, onDelete, showDate = false }:
       <div className="flex-1 overflow-auto min-h-0 scrollbar-thin">
         <table className="w-full text-left border-collapse text-xs">
           <thead className="sticky top-0 bg-slate-100 z-10 select-none">
-            <tr className="border-b border-slate-300 text-slate-900 text-[11px]">
-              <th className="py-2 px-2 w-10 text-center font-bold border-r border-slate-300">#</th>
+            <tr className="border-b border-slate-300 text-slate-900 text-xs">
+              <th className="py-2 px-2 w-10 text-center font-semibold border-r border-slate-300">#</th>
               {showDate && (
                 <SortTh col="entry_date" label="วันที่" className="text-center min-w-[85px]" />
               )}
               <SortTh col="contractor_name" label="ชื่อลูกทีม / ผู้รับเหมา" className="min-w-[150px]" />
               <SortTh col="company_name" label="สังกัด / บริษัท" className="min-w-[130px]" />
-              <th className="py-2 px-2.5 border-r border-slate-300 min-w-[90px] font-bold">ผู้ควบคุม</th>
+              <th className="py-2 px-2.5 border-r border-slate-300 min-w-[90px] font-semibold">ผู้ควบคุม</th>
               <SortTh col="check_in_time" label="เวลาตรวจ" className="text-center min-w-[85px]" />
-              <th className="py-2 px-2.5 border-r border-slate-300 min-w-[130px] font-bold">งาน / กิจกรรม</th>
+              <th className="py-2 px-2.5 border-r border-slate-300 min-w-[130px] font-semibold">งาน / กิจกรรม</th>
               <SortTh col="alc_result" label="ALC" className="text-center min-w-[65px]" />
-              <th className="py-2 px-2 text-center border-r border-slate-300 min-w-[100px] font-bold">
+              <th className="py-2 px-2 text-center border-r border-slate-300 min-w-[100px] font-semibold">
                 <span className="inline-flex items-center gap-1">
-                  <HardHat className="w-3 h-3 text-slate-600" />
+                  <HardHat className="w-3.5 h-3.5 text-slate-600" />
                   PPE
                 </span>
               </th>
-              <th className="py-2 px-2 text-right border-r border-slate-300 min-w-[70px] font-bold">ค่าแรง</th>
-              <th className="py-2 px-2 text-center w-12 font-bold">จัดการ</th>
+              <th className="py-2 px-2 text-right border-r border-slate-300 min-w-[70px] font-semibold">ค่าแรง</th>
+              <th className="py-2 px-2 text-center w-12 font-semibold">จัดการ</th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((e, idx) => {
-              const isAlcFail = e.alc_result === '>0%'
+              const isAlcFail = isAlcoholFailed(e.alc_result)
               const hasAlcRisk = getContractorAlcRisk(e.contractors) || e.notes?.includes('[เสี่ยง ALC]') || e.purpose?.includes('[เสี่ยง ALC]')
 
               return (
@@ -156,13 +156,13 @@ export function ChecklistTable({ entries, loading, onDelete, showDate = false }:
                   }`}
                 >
                   {/* # */}
-                  <td className="py-1.5 px-2 text-center text-slate-800 font-mono font-normal text-[11px] border-r border-slate-200">
+                  <td className="py-1.5 px-2 text-center text-slate-800 font-mono font-normal text-xs border-r border-slate-200">
                     {idx + 1}
                   </td>
 
                   {/* Date (if showDate) */}
                   {showDate && (
-                    <td className="py-1.5 px-2 text-center text-slate-900 font-mono font-normal text-[11px] border-r border-slate-200 whitespace-nowrap">
+                    <td className="py-1.5 px-2 text-center text-slate-900 font-mono font-normal text-xs border-r border-slate-200 whitespace-nowrap">
                       {e.entry_date}
                     </td>
                   )}
@@ -175,33 +175,33 @@ export function ChecklistTable({ entries, loading, onDelete, showDate = false }:
                   </td>
 
                   {/* Company */}
-                  <td className="py-1.5 px-2.5 text-slate-800 text-[11px] font-normal border-r border-slate-200 truncate">
+                  <td className="py-1.5 px-2.5 text-slate-800 text-xs font-normal border-r border-slate-200 truncate">
                     {e.company_name || '—'}
                   </td>
 
                   {/* Supervisor */}
-                  <td className="py-1.5 px-2.5 text-slate-800 text-[11px] font-normal border-r border-slate-200 truncate">
+                  <td className="py-1.5 px-2.5 text-slate-800 text-xs font-normal border-r border-slate-200 truncate">
                     {e.supervisor || '—'}
                   </td>
 
                   {/* Time */}
-                  <td className="py-1.5 px-2.5 text-center border-r border-slate-200 font-mono text-[11px]">
-                    <span className="text-slate-900 font-bold">{e.check_in_time || '—'}</span>
+                  <td className="py-1.5 px-2.5 text-center border-r border-slate-200 font-mono text-xs">
+                    <span className="text-slate-900 font-normal">{e.check_in_time || '—'}</span>
                   </td>
 
                   {/* Activity & Purpose */}
                   <td className="py-1.5 px-2.5 border-r border-slate-200">
                     <div className="flex flex-col">
-                      <span className="font-normal text-slate-900 text-[11px] truncate max-w-[140px]">
+                      <span className="font-normal text-slate-900 text-xs truncate max-w-[140px]">
                         {e.activity_name || 'งานทั่วไป'}
                       </span>
                       {e.purpose && (
-                        <span className="text-[10px] text-blue-900 bg-blue-100 px-1 py-0.2 rounded border border-blue-300 truncate max-w-[140px] mt-0.5 inline-block">
+                        <span className="text-xs font-normal text-blue-900 bg-blue-100 px-1 py-0.2 rounded border border-blue-300 truncate max-w-[140px] mt-0.5 inline-block">
                           📌 {e.purpose}
                         </span>
                       )}
                       {e.location && (
-                        <span className="text-[10px] text-slate-600 truncate">
+                        <span className="text-xs font-normal text-slate-600 truncate">
                           📍 {e.location}
                         </span>
                       )}
@@ -211,7 +211,7 @@ export function ChecklistTable({ entries, loading, onDelete, showDate = false }:
                   {/* ALC */}
                   <td className="py-1.5 px-1.5 text-center border-r border-slate-200">
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                      className={`px-1.5 py-0.5 rounded text-xs font-normal border ${
                         isAlcFail
                           ? 'bg-red-100 text-red-900 border-red-400'
                           : 'bg-emerald-100 text-emerald-900 border-emerald-400'
@@ -227,9 +227,9 @@ export function ChecklistTable({ entries, loading, onDelete, showDate = false }:
                   </td>
 
                   {/* Wage */}
-                  <td className="py-1.5 px-2 text-right border-r border-slate-200 font-mono text-[11px]">
+                  <td className="py-1.5 px-2 text-right border-r border-slate-200 font-mono text-xs">
                     {e.daily_wage ? (
-                      <span className="font-semibold text-slate-950">{e.daily_wage.toLocaleString()}</span>
+                      <span className="font-normal text-slate-950">{e.daily_wage.toLocaleString()}</span>
                     ) : (
                       <span className="text-slate-400">—</span>
                     )}
@@ -264,12 +264,12 @@ export function ChecklistTable({ entries, loading, onDelete, showDate = false }:
       </div>
 
       {/* Footer Info Strip */}
-      <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-600">
+      <div className="px-3 py-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
         <span>
-          แสดงทั้งหมด <strong className="text-slate-900 font-bold">{entries.length}</strong> รายการ
+          แสดงทั้งหมด <strong className="text-slate-900 font-semibold">{entries.length}</strong> รายการ
         </span>
         <span>
-          ตรวจผ่านครบ: <strong className="text-emerald-800 font-bold">{entries.filter(e => e.alc_result === '0%' && e.ppe_helmet && e.ppe_vest && e.ppe_shirt && e.ppe_gloves && e.ppe_shoes).length}</strong> รายการ
+          ตรวจผ่านครบ: <strong className="text-emerald-800 font-semibold">{entries.filter(e => isAlcoholPassed(e.alc_result) && e.ppe_helmet && e.ppe_vest && e.ppe_shirt && e.ppe_gloves && e.ppe_shoes).length}</strong> รายการ
         </span>
       </div>
     </div>
