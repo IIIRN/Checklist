@@ -268,6 +268,11 @@ export function AppHeader({ role, initials = '?', email = '', name = '' }: AppHe
           {/* Mobile Checklist Quick Switch Button */}
           <Link
             href="/checklist-m"
+            onClick={() => {
+              try {
+                sessionStorage.removeItem('sitecheck_view_mode')
+              } catch {}
+            }}
             className="relative w-8 h-8 rounded-md flex items-center justify-center transition-all border shadow-2xs cursor-pointer bg-white hover:bg-slate-100 text-slate-700 hover:text-emerald-700 border-slate-300"
             title="เปิดโหมดมือถือ (Mobile Checklist)"
           >
@@ -325,7 +330,12 @@ export function AppHeader({ role, initials = '?', email = '', name = '' }: AppHe
                 <span>Dashboard ภาพรวม</span>
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => router.push('/checklist-m')}
+                onClick={() => {
+                  try {
+                    sessionStorage.removeItem('sitecheck_view_mode')
+                  } catch {}
+                  router.push('/checklist-m')
+                }}
                 className="flex items-center gap-2 px-2 py-1.5 text-xs text-emerald-800 hover:text-emerald-950 cursor-pointer font-medium bg-emerald-50/50"
               >
                 <Smartphone className="w-3.5 h-3.5 text-emerald-600" />

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AppHeader } from '@/components/layout'
+import { ResponsiveViewSwitcher } from '@/components/layout/ResponsiveViewSwitcher'
 
 import type { UserRole } from '@/lib/types'
 
@@ -37,6 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-slate-100">
+      <ResponsiveViewSwitcher />
       <AppHeader
         role={role}
         initials={initials}

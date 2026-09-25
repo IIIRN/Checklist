@@ -258,8 +258,13 @@ export function MobileAuthSheet({
               {/* Direct Access to PC Dashboard if user wants to switch */}
               <Link
                 href="/dashboard"
-                onClick={() => onOpenChange(false)}
-                className="w-full h-10 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-2xs"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem('sitecheck_view_mode', 'desktop')
+                  } catch {}
+                  onOpenChange(false)
+                }}
+                className="w-full h-10 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-2xs cursor-pointer"
               >
                 <Monitor className="w-3.5 h-3.5 text-blue-600" />
                 <span>ไปหน้าระบบจัดการ PC (Dashboard)</span>

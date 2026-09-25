@@ -22,6 +22,157 @@
 }
 
 /* ═══════════════════════════════════════════════
+   PREVENT MOBILE & SCREEN ZOOM
+═══════════════════════════════════════════════ */
+html, body {
+  touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Prevent iOS Safari auto-zoom on input focus */
+@media screen and (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════════
+   CROSS-PLATFORM INPUT NORMALIZATION (iOS Safari & Android Chrome)
+   Forces consistent CSS styling across all mobile operating systems
+═════════════════════════════════════════════════════════════════ */
+input,
+select,
+textarea,
+button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+}
+
+/* Remove iOS Safari inner shadow, gradients, and native borders */
+input[type="text"],
+input[type="search"],
+input[type="tel"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #ffffff;
+  border-radius: 0.5rem;
+  -webkit-border-radius: 0.5rem;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+}
+
+/* Fix iOS Safari Date & Time inputs */
+input[type="date"],
+input[type="time"] {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  min-height: 2.25rem;
+  color: #0f172a;
+}
+
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: inherit;
+  line-height: normal;
+  margin: 0;
+  padding: 0;
+  min-height: 1.25em;
+  height: auto;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.65;
+  padding: 0;
+  margin: 0 0 0 4px;
+  background-color: transparent;
+}
+
+input[type="date"]::-webkit-inner-spin-button,
+input[type="time"]::-webkit-inner-spin-button {
+  display: none;
+  -webkit-appearance: none;
+}
+
+/* Remove Webkit Search Cancel & Decoration */
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  display: none;
+  -webkit-appearance: none;
+}
+
+/* Cross-Platform Pure CSS Checkbox: Identical across iOS and Android */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 0.25rem;
+  background-color: #ffffff;
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: all 0.15s ease-in-out;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+input[type="checkbox"]:checked {
+  background-color: #059669;
+  border-color: #059669;
+}
+
+input[type="checkbox"]:checked::before {
+  content: "";
+  width: 0.35rem;
+  height: 0.55rem;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-0.5px, -1px);
+}
+
+input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Cross-Platform Custom Select Dropdown Arrow */
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.65rem center;
+  background-size: 1rem 1rem;
+  padding-right: 2rem !important;
+}
+
+/* Consistent Placeholder Across Browsers */
+::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+::-webkit-input-placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+/* ═══════════════════════════════════════════════
    DESIGN SYSTEM — MODERN SHARP
 ═══════════════════════════════════════════════ */
 :root {

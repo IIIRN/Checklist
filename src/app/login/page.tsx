@@ -53,7 +53,16 @@ export default function LoginPage() {
       }
 
       toast.success('เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ')
-      router.push('/dashboard')
+
+      const isMobileScreen = typeof window !== 'undefined' && window.innerWidth < 768
+      if (isMobileScreen) {
+        try {
+          sessionStorage.removeItem('sitecheck_view_mode')
+        } catch {}
+        router.push('/checklist-m')
+      } else {
+        router.push('/dashboard')
+      }
       router.refresh()
     } catch (err: any) {
       toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ')

@@ -681,7 +681,7 @@ export function MobileChecklistM({ initialDate, mobileUser, onOpenAuth, onNaviga
                   type="date"
                   value={date}
                   onChange={e => setDate(e.target.value)}
-                  className="h-9 text-xs font-semibold px-2.5 border border-slate-300 rounded-lg bg-white text-slate-900 cursor-pointer"
+                  className="h-9 text-xs font-semibold px-2.5 border border-slate-300 rounded-lg bg-white text-slate-900 cursor-pointer text-center"
                 />
                 <button
                   onClick={() => {
@@ -1088,7 +1088,7 @@ export function MobileChecklistM({ initialDate, mobileUser, onOpenAuth, onNaviga
                     type="time"
                     value={formCheckIn}
                     onChange={e => setFormCheckIn(e.target.value)}
-                    className="w-full h-9 text-xs font-normal px-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:bg-white"
+                    className="w-full h-9 text-xs font-normal px-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:bg-white text-center"
                   />
                 </div>
                 <div>
@@ -1097,7 +1097,7 @@ export function MobileChecklistM({ initialDate, mobileUser, onOpenAuth, onNaviga
                     type="time"
                     value={formCheckOut}
                     onChange={e => setFormCheckOut(e.target.value)}
-                    className="w-full h-9 text-xs font-normal px-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:bg-white"
+                    className="w-full h-9 text-xs font-normal px-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 focus:bg-white text-center"
                   />
                 </div>
               </div>
