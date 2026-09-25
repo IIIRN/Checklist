@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { MobileChecklistM } from '@/components/checklist/MobileChecklistM'
 import { MobileAuthSheet } from '@/components/mobile/MobileAuthSheet'
 import { MobileBottomNav, type MobileTab } from '@/components/mobile/MobileBottomNav'
@@ -10,10 +11,12 @@ import { MobileCompaniesView } from '@/components/mobile/MobileCompaniesView'
 import { MobileActivitiesView } from '@/components/mobile/MobileActivitiesView'
 
 export default function MobileChecklistStandalonePage() {
+  const supabase = useMemo(() => createClient(), [])
   const [activeTab, setActiveTab] = useState<MobileTab>('checklist')
   const [checklistResetCount, setChecklistResetCount] = useState(0)
   const [authSheetOpen, setAuthSheetOpen] = useState(false)
   const [mobileUser, setMobileUser] = useState<{
+    id?: string
     name?: string
     phone?: string
     role?: string
@@ -29,15 +32,42 @@ export default function MobileChecklistStandalonePage() {
     setActiveTab(tab)
   }
 
-  // Load mobile auth state from localStorage on mount
+  // Load mobile auth state from localStorage on mount or sync with active Supabase session
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('sitecheck_mobile_user')
-      if (saved) {
-        setMobileUser(JSON.parse(saved))
+    async function initAuth() {
+      try {
+        const saved = localStorage.getItem('sitecheck_mobile_user')
+        if (saved) {
+          setMobileUser(JSON.parse(saved))
+          return
+        }
+
+        // If not in localStorage, check if active Supabase session exists from desktop/web login
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .maybeSingle()
+
+          const userObj = {
+            id: user.id,
+            name: profile?.full_name || user.email?.split('@')[0] || 'Admin',
+            email: user.email,
+            phone: profile?.phone || '',
+            role: profile?.role || 'admin',
+            authMethod: 'email' as const,
+          }
+          setMobileUser(userObj)
+          localStorage.setItem('sitecheck_mobile_user', JSON.stringify(userObj))
+        }
+      } catch (err) {
+        console.error('Error synchronizing mobile auth:', err)
       }
-    } catch {}
-  }, [])
+    }
+    initAuth()
+  }, [supabase])
 
   return (
     <div className="flex flex-col flex-1 h-full max-h-full min-h-0 bg-slate-100 overflow-hidden select-none">

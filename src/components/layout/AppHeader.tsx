@@ -11,7 +11,7 @@ import { th } from 'date-fns/locale'
 import {
   LayoutDashboard, ClipboardCheck, History, HardHat,
   UserCheck, Layers, Building2, LogOut, ShieldCheck,
-  ChevronDown, CalendarDays, Database, Menu, X, Sparkles, Check, MessageSquare
+  ChevronDown, CalendarDays, Database, Menu, X, Sparkles, Check, MessageSquare, Smartphone
 } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -109,6 +109,9 @@ export function AppHeader({ role, initials = '?', email = '', name = '' }: AppHe
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleLogout = async () => {
+    try {
+      localStorage.removeItem('sitecheck_mobile_user')
+    } catch {}
     await supabase.auth.signOut()
     toast.success('ออกจากระบบแล้ว')
     router.push('/login')
@@ -262,6 +265,15 @@ export function AppHeader({ role, initials = '?', email = '', name = '' }: AppHe
             <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 ring-1 ring-white" />
           </Link>
 
+          {/* Mobile Checklist Quick Switch Button */}
+          <Link
+            href="/checklist-m"
+            className="relative w-8 h-8 rounded-md flex items-center justify-center transition-all border shadow-2xs cursor-pointer bg-white hover:bg-slate-100 text-slate-700 hover:text-emerald-700 border-slate-300"
+            title="เปิดโหมดมือถือ (Mobile Checklist)"
+          >
+            <Smartphone className="w-4 h-4 text-emerald-600" />
+          </Link>
+
           {/* Current Date Pill */}
           <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 border border-slate-300 text-xs text-slate-800 font-normal">
             <CalendarDays className="w-3.5 h-3.5 text-blue-700 shrink-0" />
@@ -311,6 +323,13 @@ export function AppHeader({ role, initials = '?', email = '', name = '' }: AppHe
               >
                 <LayoutDashboard className="w-3.5 h-3.5 text-slate-600" />
                 <span>Dashboard ภาพรวม</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push('/checklist-m')}
+                className="flex items-center gap-2 px-2 py-1.5 text-xs text-emerald-800 hover:text-emerald-950 cursor-pointer font-medium bg-emerald-50/50"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                <span>เปิดโหมดมือถือ (Mobile Mode)</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-slate-200" />
               <DropdownMenuItem

@@ -24,7 +24,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) {
         toast.error('เข้าสู่ระบบไม่สำเร็จ', { description: error.message })
@@ -32,8 +32,28 @@ export default function LoginPage() {
         return
       }
 
+      if (data.user) {
+        try {
+          const { data: pData } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .maybeSingle()
+
+          const mobileUserObj = {
+            id: data.user.id,
+            name: pData?.full_name || data.user.email?.split('@')[0] || 'Admin',
+            email: data.user.email,
+            phone: pData?.phone || '',
+            role: pData?.role || 'admin',
+            authMethod: 'email',
+          }
+          localStorage.setItem('sitecheck_mobile_user', JSON.stringify(mobileUserObj))
+        } catch {}
+      }
+
       toast.success('เข้าสู่ระบบสำเร็จ ยินดีต้อนรับ')
-      router.push('/checklist')
+      router.push('/dashboard')
       router.refresh()
     } catch (err: any) {
       toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ')
@@ -162,30 +182,37 @@ export default function LoginPage() {
               </span>
             </div>
 
-            {/* Mobile Mode Direct Access Link Card */}
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-300 space-y-2 hover:border-emerald-500 transition-all">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-300">
-                  <Smartphone className="w-4 h-4" />
+            {/* Mobile Mode Direct Access Link Card (Entire Card is Clickable) */}
+            <Link
+              href="/checklist-m"
+              className="block p-3.5 rounded-xl bg-slate-50 hover:bg-emerald-50/70 border border-slate-300 hover:border-emerald-500 shadow-2xs hover:shadow-sm transition-all cursor-pointer group space-y-2.5"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-emerald-100 group-hover:bg-emerald-200 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-300 transition-colors">
+                  <Smartphone className="w-4 h-4 text-emerald-700" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-xs font-bold text-slate-900 truncate">
-                    โหมดผู้ตรวจหน้างานบนมือถือ
-                  </h2>
-                  <p className="text-[11px] text-slate-600 font-normal truncate">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xs font-bold text-slate-900 group-hover:text-emerald-950 truncate">
+                      โหมดผู้ตรวจหน้างานบนมือถือ
+                    </h2>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200 shrink-0 ml-1">
+                      ตรวจด่วน
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 font-normal truncate mt-0.5">
                     ตรวจด่วน 3 สเตป เข้าผ่าน LINE / เบอร์โทร
                   </p>
                 </div>
               </div>
 
-              <Link
-                href="/checklist-m"
-                className="w-full h-9 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.99] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition-all"
+              <div
+                className="w-full h-9 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 group-hover:from-emerald-700 group-hover:to-teal-700 active:scale-[0.99] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition-all pointer-events-none"
               >
                 <span>เปิดโหมดมือถือ (Mobile Checklist)</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </div>
+            </Link>
 
           </div>
 

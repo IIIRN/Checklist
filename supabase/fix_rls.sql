@@ -42,15 +42,27 @@ CREATE POLICY "Allow all for authenticated users" ON public.companies
 CREATE POLICY "Allow all for authenticated users" ON public.checklist_entries 
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- สิทธิ์อ่านสำหรับ anon
+-- สิทธิ์สำหรับ anon (รองรับการใช้งานผ่านมือถือ/ช่างหน้างานโดยไม่ต้องล็อกอินแอดมิน)
 DROP POLICY IF EXISTS "Allow anon read activities" ON public.activities;
 CREATE POLICY "Allow anon read activities" ON public.activities FOR SELECT TO anon USING (true);
+DROP POLICY IF EXISTS "Allow anon manage activities" ON public.activities;
+CREATE POLICY "Allow anon manage activities" ON public.activities FOR ALL TO anon USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow anon read contractors" ON public.contractors;
 CREATE POLICY "Allow anon read contractors" ON public.contractors FOR SELECT TO anon USING (true);
+DROP POLICY IF EXISTS "Allow anon manage contractors" ON public.contractors;
+CREATE POLICY "Allow anon manage contractors" ON public.contractors FOR ALL TO anon USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow anon read companies" ON public.companies;
 CREATE POLICY "Allow anon read companies" ON public.companies FOR SELECT TO anon USING (true);
+DROP POLICY IF EXISTS "Allow anon manage companies" ON public.companies;
+CREATE POLICY "Allow anon manage companies" ON public.companies FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow anon read user_profiles" ON public.user_profiles;
+CREATE POLICY "Allow anon read user_profiles" ON public.user_profiles FOR SELECT TO anon USING (true);
+
+DROP POLICY IF EXISTS "Allow anon all checklist_entries" ON public.checklist_entries;
+CREATE POLICY "Allow anon all checklist_entries" ON public.checklist_entries FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- 3. เพิ่มคอลัมน์ที่จำเป็น
 ALTER TABLE public.activities ADD COLUMN IF NOT EXISTS code TEXT;

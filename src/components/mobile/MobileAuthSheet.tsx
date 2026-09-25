@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import {
@@ -9,7 +10,7 @@ import {
 import {
   Smartphone, Phone, MessageSquare, ShieldCheck,
   User, Lock, ArrowRight, Loader2, CheckCircle2,
-  RefreshCw, LogOut, X, Sparkles
+  RefreshCw, LogOut, X, Sparkles, Monitor
 } from 'lucide-react'
 
 interface MobileAuthSheetProps {
@@ -57,7 +58,7 @@ export function MobileAuthSheet({
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'line' as any,
         options: {
-          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/checklist-m` : undefined,
+          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?next=/checklist-m` : undefined,
         },
       })
 
@@ -140,10 +141,30 @@ export function MobileAuthSheet({
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
 
+      let fullName = data.user?.email?.split('@')[0] || 'Admin'
+      let role = 'admin'
+      let phoneNum = ''
+
+      try {
+        const { data: pData } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .maybeSingle()
+
+        if (pData) {
+          if (pData.full_name) fullName = pData.full_name
+          if (pData.role) role = pData.role
+          if (pData.phone) phoneNum = pData.phone
+        }
+      } catch {}
+
       const userObj = {
-        name: data.user?.email?.split('@')[0] || 'Admin',
+        id: data.user.id,
+        name: fullName,
         email: data.user?.email,
-        role: 'admin',
+        phone: phoneNum,
+        role,
         authMethod: 'email' as const,
       }
 
@@ -161,9 +182,11 @@ export function MobileAuthSheet({
   }
 
   // Logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem('sitecheck_mobile_user')
-    supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut()
+    } catch {}
     toast.info('ออกจากระบบแล้ว')
     if (onLogout) onLogout()
     onOpenChange(false)
@@ -219,18 +242,28 @@ export function MobileAuthSheet({
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => onOpenChange(false)}
-                  className="h-10 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-all text-center border border-slate-300"
+                  className="h-10 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-all text-center border border-slate-300 cursor-pointer"
                 >
                   ปิดหน้าต่าง
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="h-10 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                  className="h-10 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>ออกจากระบบ</span>
                 </button>
               </div>
+
+              {/* Direct Access to PC Dashboard if user wants to switch */}
+              <Link
+                href="/dashboard"
+                onClick={() => onOpenChange(false)}
+                className="w-full h-10 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-2xs"
+              >
+                <Monitor className="w-3.5 h-3.5 text-blue-600" />
+                <span>ไปหน้าระบบจัดการ PC (Dashboard)</span>
+              </Link>
             </div>
           ) : (
             <>

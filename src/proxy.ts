@@ -25,15 +25,21 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login')
-  const isPublicPath = request.nextUrl.pathname === '/'
+  const pathname = request.nextUrl.pathname
+  const isAuthPage = pathname.startsWith('/login')
+  const isPublicPath = pathname === '/'
+  const isMobilePath = pathname.startsWith('/checklist-m')
+  const isApiPath = pathname.startsWith('/api')
+  const isAuthCallback = pathname.startsWith('/auth')
 
-  if (!user && !isAuthPage && !isPublicPath) {
+  // Protect PC / Management routes: redirect to /login if unauthenticated
+  if (!user && !isAuthPage && !isPublicPath && !isMobilePath && !isApiPath && !isAuthCallback) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
+  // If already authenticated and visits /login, redirect to /dashboard
   if (user && isAuthPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'

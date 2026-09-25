@@ -112,6 +112,9 @@ export function AppSidebar({ role, initials = '?', email = '', name = '' }: AppS
   const supabase = createClient()
 
   const handleLogout = async () => {
+    try {
+      localStorage.removeItem('sitecheck_mobile_user')
+    } catch {}
     await supabase.auth.signOut()
     toast.success('ออกจากระบบแล้ว')
     router.push('/login')

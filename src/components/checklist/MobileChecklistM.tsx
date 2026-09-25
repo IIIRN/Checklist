@@ -45,17 +45,6 @@ export function MobileChecklistM({ initialDate, mobileUser, onOpenAuth, onNaviga
   // ── Step State: 1 = Team List (Frame 4), 2 = Team Members (Frame 5), 3 = Individual Checklist Form (Frame 6) ──
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1)
 
-  // Reset to Step 1 when bottom menu "เช็คลิสต์" is clicked
-  useEffect(() => {
-    if (resetTrigger && resetTrigger > 0) {
-      setCurrentStep(1)
-      setSelectedCompany(null)
-      setSelectedContractor(null)
-      setCompanySearch('')
-      setMemberSearch('')
-    }
-  }, [resetTrigger])
-
   // Date
   const [date, setDate] = useState(initialDate || format(new Date(), 'yyyy-MM-dd'))
 
@@ -75,6 +64,17 @@ export function MobileChecklistM({ initialDate, mobileUser, onOpenAuth, onNaviga
   const [memberSearch, setMemberSearch] = useState('')
   const [memberStatusFilter, setMemberStatusFilter] = useState<'pending' | 'checked' | 'all'>('pending')
   const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null)
+
+  // Reset to Step 1 when bottom menu "เช็คลิสต์" is clicked
+  useEffect(() => {
+    if (resetTrigger && resetTrigger > 0) {
+      setCurrentStep(1)
+      setSelectedCompany(null)
+      setSelectedContractor(null)
+      setCompanySearch('')
+      setMemberSearch('')
+    }
+  }, [resetTrigger])
 
   // Step 3: Form State for Single Contractor
   const [formCheckIn, setFormCheckIn] = useState('08:00')
@@ -891,7 +891,7 @@ export function MobileChecklistM({ initialDate, mobileUser, onOpenAuth, onNaviga
                         ตรวจบันทึกครบทุกคนแล้ว!
                       </h3>
                       <p className="text-xs text-slate-600 font-normal">
-                        บันทึกข้อมูลเรียบร้อยแล้ว รายการทั้งหมดจะแสดงในหน้า <span className="font-semibold text-blue-700">"ประวัติ"</span>
+                        บันทึกข้อมูลเรียบร้อยแล้ว รายการทั้งหมดจะแสดงในหน้า <span className="font-semibold text-blue-700">&ldquo;ประวัติ&rdquo;</span>
                       </p>
                     </div>
 
