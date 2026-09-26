@@ -10,14 +10,14 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import Link from 'next/link'
-import { getContractorAlcRisk, isAlcoholPassed, isAlcoholFailed } from '@/lib/types'
+import { getContractorAlcRisk, isAlcoholPassed, isAlcoholFailed, isAlcoholUnchecked } from '@/lib/types'
 
 /* ── PPE Compact Dots with Labels ── */
 const PPECompact = ({ entry }: { entry: ChecklistEntry }) => {
   const items = [
     { label: 'หมวก', v: entry.ppe_helmet, icon: '⛑' },
     { label: 'กั๊ก', v: entry.ppe_vest, icon: '🦺' },
-    { label: 'เสื้อ', v: entry.ppe_shirt, icon: '👕' },
+    { label: 'แว่นตา', v: entry.ppe_shirt, icon: '🥽' },
     { label: 'ถุงมือ', v: entry.ppe_gloves, icon: '🧤' },
     { label: 'รองเท้า', v: entry.ppe_shoes, icon: '👢' },
   ]
@@ -64,12 +64,6 @@ interface ChecklistTableProps {
   showDate?: boolean
 }
 
-function SortIcon({ col, sortKey, asc }: { col: SortKey; sortKey: SortKey; asc: boolean }) {
-  if (sortKey !== col) return <ArrowUpDown className="w-2.5 h-2.5 opacity-30 inline ml-1" />
-  return asc ? <ArrowUp className="w-2.5 h-2.5 text-blue-600 inline ml-1" />
-             : <ArrowDown className="w-2.5 h-2.5 text-blue-600 inline ml-1" />
-}
-
 export function ChecklistTable({ entries, loading, onDelete, showDate = false }: ChecklistTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('contractor_name')
   const [asc, setAsc] = useState(true)
@@ -85,15 +79,19 @@ export function ChecklistTable({ entries, loading, onDelete, showDate = false }:
     return asc ? va.localeCompare(vb) : vb.localeCompare(va)
   })
 
-  const renderSortTh = (col: SortKey, label: string, className = '') => (
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="w-2.5 h-2.5 opacity-30 inline ml-1" />
+    return asc ? <ArrowUp className="w-2.5 h-2.5 text-blue-600 inline ml-1" />
+               : <ArrowDown className="w-2.5 h-2.5 text-blue-600 inline ml-1" />
+  }
+
+  const SortTh = ({ col, label, className = '' }: { col: SortKey; label: string; className?: string }) => (
     <th
-      key={col}
       onClick={() => toggleSort(col)}
       className={`py-2 px-2.5 border-r border-slate-300 cursor-pointer select-none hover:bg-slate-200/70 transition-colors ${className}`}
     >
       <span className="inline-flex items-center gap-1 font-bold">
-        {label}
-        <SortIcon col={col} sortKey={sortKey} asc={asc} />
+        {label}<SortIcon col={col} />
       </span>
     </th>
   )
@@ -122,13 +120,15 @@ export function ChecklistTable({ entries, loading, onDelete, showDate = false }:
           <thead className="sticky top-0 bg-slate-100 z-10 select-none">
             <tr className="border-b border-slate-300 text-slate-900 text-xs">
               <th className="py-2 px-2 w-10 text-center font-semibold border-r border-slate-300">#</th>
-              {showDate && renderSortTh("entry_date", "วันที่", "text-center min-w-[85px]")}
-              {renderSortTh("contractor_name", "ชื่อลูกทีม / ผู้รับเหมา", "min-w-[150px]")}
-              {renderSortTh("company_name", "สังกัด / บริษัท", "min-w-[130px]")}
+              {showDate && (
+                <SortTh col="entry_date" label="วันที่" className="text-center min-w-[85px]" />
+              )}
+              <SortTh col="contractor_name" label="ชื่อลูกทีม / ผู้รับเหมา" className="min-w-[150px]" />
+              <SortTh col="company_name" label="สังกัด / บริษัท" className="min-w-[130px]" />
               <th className="py-2 px-2.5 border-r border-slate-300 min-w-[90px] font-semibold">ผู้ควบคุม</th>
-              {renderSortTh("check_in_time", "เวลาตรวจ", "text-center min-w-[85px]")}
+              <SortTh col="check_in_time" label="เวลาตรวจ" className="text-center min-w-[85px]" />
               <th className="py-2 px-2.5 border-r border-slate-300 min-w-[130px] font-semibold">งาน / กิจกรรม</th>
-              {renderSortTh("alc_result", "ALC", "text-center min-w-[65px]")}
+              <SortTh col="alc_result" label="ALC" className="text-center min-w-[65px]" />
               <th className="py-2 px-2 text-center border-r border-slate-300 min-w-[100px] font-semibold">
                 <span className="inline-flex items-center gap-1">
                   <HardHat className="w-3.5 h-3.5 text-slate-600" />
@@ -212,12 +212,14 @@ export function ChecklistTable({ entries, loading, onDelete, showDate = false }:
                   <td className="py-1.5 px-1.5 text-center border-r border-slate-200">
                     <span
                       className={`px-1.5 py-0.5 rounded text-xs font-normal border ${
-                        isAlcFail
-                          ? 'bg-red-100 text-red-900 border-red-400'
-                          : 'bg-emerald-100 text-emerald-900 border-emerald-400'
+                        isAlcoholUnchecked(e.alc_result)
+                          ? 'bg-slate-100 text-slate-600 border-slate-300'
+                          : isAlcFail
+                          ? 'bg-red-100 text-red-900 border-red-400 font-semibold'
+                          : 'bg-emerald-100 text-emerald-900 border-emerald-400 font-semibold'
                       }`}
                     >
-                      {e.alc_result}
+                      {isAlcoholUnchecked(e.alc_result) ? 'ยังไม่ตรวจ' : e.alc_result}
                     </span>
                   </td>
 
