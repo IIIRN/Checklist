@@ -52,7 +52,7 @@
     "telegram_chat_id": "",
     "schedule_enabled": true,
     "schedule_times": [
-      "09:00"
+      "11:28"
     ],
     "schedule_mode": "flex",
     "cron_secret": "sitecheck-cron-secret"
