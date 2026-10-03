@@ -162,6 +162,7 @@ export default function LineOAPage() {
         throw new Error(errJson.error || 'บันทึกลงฐานข้อมูล Supabase ไม่สำเร็จ')
       }
       toast.success('บันทึกการตั้งค่าการแจ้งเตือนและรอบเวลาลง Supabase เรียบร้อยแล้ว')
+      await fetchSchedulerStatus()
     } catch (err: any) {
       console.error('Save notification config error:', err)
       toast.warning('บันทึกเฉพาะในเบราว์เซอร์ (Supabase บันทึกไม่สำเร็จ: ' + (err.message || '') + ')')
@@ -270,7 +271,7 @@ export default function LineOAPage() {
     for (const t of sorted) {
       const [h, m] = t.split(':').map(Number)
       const slotMins = h * 60 + m
-      if (slotMins > currentMins) {
+      if (slotMins >= currentMins) {
         return t
       }
     }
@@ -524,7 +525,18 @@ export default function LineOAPage() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setConfigOpen(true)}
+            onClick={() => {
+              fetch('/api/settings?id=notification_config')
+                .then(r => r.json())
+                .then(res => {
+                  if (res.data && typeof res.data === 'object') {
+                    setConfig(prev => ({ ...prev, ...res.data }))
+                  }
+                })
+                .catch(() => {})
+              fetchSchedulerStatus()
+              setConfigOpen(true)
+            }}
             className="h-8 text-xs border-slate-300 text-slate-800 bg-white hover:bg-slate-50 gap-1.5 font-bold shadow-2xs"
           >
             <Settings className="w-3.5 h-3.5 text-slate-700" />
@@ -1379,6 +1391,12 @@ export default function LineOAPage() {
                         type="time"
                         value={newTimeInput}
                         onChange={e => setNewTimeInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleAddTimeSlot()
+                          }
+                        }}
                         className="h-8 text-xs font-bold w-28 bg-white border-slate-300"
                       />
                       <Button
@@ -1505,7 +1523,12 @@ export default function LineOAPage() {
                 type="button"
                 size="sm"
                 onClick={async () => {
-                  await saveConfig(config)
+                  let updated = { ...config }
+                  // If user typed a time in the input and didn't click "เพิ่มเวลา", automatically include it!
+                  if (newTimeInput && !updated.schedule_times.includes(newTimeInput)) {
+                    updated.schedule_times = [...updated.schedule_times, newTimeInput].sort()
+                  }
+                  await saveConfig(updated)
                   setConfigOpen(false)
                 }}
                 disabled={savingSettings}
