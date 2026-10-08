@@ -96,6 +96,22 @@ export async function savePpeChecklistItems(items: ChecklistPpeItem[]): Promise<
   return items
 }
 
+function applyEnvFallbacks(config: NotificationConfig): NotificationConfig {
+  return {
+    ...config,
+    line_channel_access_token:
+      config.line_channel_access_token || process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
+    line_target_id:
+      config.line_target_id || process.env.LINE_TARGET_ID || '',
+    line_liff_id:
+      config.line_liff_id || process.env.NEXT_PUBLIC_LIFF_ID || '',
+    telegram_bot_token:
+      config.telegram_bot_token || process.env.TELEGRAM_BOT_TOKEN || '',
+    telegram_chat_id:
+      config.telegram_chat_id || process.env.TELEGRAM_CHAT_ID || '',
+  }
+}
+
 // ── Get Notification Config ──
 export async function getNotificationConfig(): Promise<NotificationConfig> {
   try {
@@ -107,7 +123,7 @@ export async function getNotificationConfig(): Promise<NotificationConfig> {
       .maybeSingle()
 
     if (!error && data && data.data && typeof data.data === 'object') {
-      return { ...DEFAULT_NOTIFICATION_CONFIG, ...data.data } as NotificationConfig
+      return applyEnvFallbacks({ ...DEFAULT_NOTIFICATION_CONFIG, ...data.data } as NotificationConfig)
     }
   } catch (err) {
     // Supabase error, fallback to local
@@ -115,10 +131,10 @@ export async function getNotificationConfig(): Promise<NotificationConfig> {
 
   const local = await readLocalSettings()
   if (local.notification_config && typeof local.notification_config === 'object') {
-    return { ...DEFAULT_NOTIFICATION_CONFIG, ...local.notification_config }
+    return applyEnvFallbacks({ ...DEFAULT_NOTIFICATION_CONFIG, ...local.notification_config })
   }
 
-  return DEFAULT_NOTIFICATION_CONFIG
+  return applyEnvFallbacks(DEFAULT_NOTIFICATION_CONFIG)
 }
 
 // ── Save Notification Config ──
@@ -133,15 +149,18 @@ export async function saveNotificationConfig(cfg: Partial<NotificationConfig>): 
   // 2. Try saving to Supabase settings table
   try {
     const supabase = createServiceClient()
-    await supabase
+    const { error } = await supabase
       .from('settings')
       .upsert({
         id: 'notification_config',
         data: merged,
         updated_at: new Date().toISOString(),
       })
-  } catch (err) {
-    console.warn('[settings-store] Supabase upsert notification_config error:', err)
+    if (error) {
+      console.warn('[settings-store] Supabase upsert notification_config error:', error.message)
+    }
+  } catch (err: any) {
+    console.warn('[settings-store] Supabase upsert notification_config error:', err?.message || err)
   }
 
   return merged

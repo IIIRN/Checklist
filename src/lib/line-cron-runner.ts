@@ -57,8 +57,8 @@ export async function runDailyCronNotification(options: CronRunOptions = {}) {
     activities ?? []
   )
 
-  const textMsg = formatDailyLineMessage(report)
-  const flexPayload = buildDailyLineFlexMessage(report)
+  const textMsg = formatDailyLineMessage(report, options.slot)
+  const flexPayload = buildDailyLineFlexMessage(report, options.slot)
 
   const dispatchResult = await sendNotification({
     message: textMsg,
@@ -76,7 +76,13 @@ export async function runDailyCronNotification(options: CronRunOptions = {}) {
     executed: true,
     success: dispatchResult.success,
     date: todayStr,
-    time: format(now, 'HH:mm:ss น.'),
+    time: new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Bangkok',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(now) + ' น.',
     slot: options.slot || null,
     reportStats: {
       totalRegistered: report.totalRegistered,
