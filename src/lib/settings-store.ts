@@ -8,6 +8,7 @@ import {
   DEFAULT_NOTIFICATION_CONFIG,
   MealConfig,
   DEFAULT_MEAL_CONFIG,
+  NotificationLogEntry,
 } from '@/lib/types'
 
 const SETTINGS_FILE = path.join(process.cwd(), 'data', 'settings.json')
@@ -16,6 +17,7 @@ interface SettingsData {
   checklist_ppe_items?: ChecklistPpeItem[]
   notification_config?: NotificationConfig
   meal_config?: MealConfig
+  notification_logs?: NotificationLogEntry[]
   [key: string]: any
 }
 
@@ -215,6 +217,97 @@ export async function saveMealConfig(cfg: Partial<MealConfig>): Promise<MealConf
   }
 
   return merged
+}
+
+// ── Notification Logs Store ──
+export async function getNotificationLogs(limit = 30): Promise<NotificationLogEntry[]> {
+  try {
+    const supabase = createServiceClient()
+    const { data, error } = await supabase
+      .from('settings')
+      .select('data')
+      .eq('id', 'notification_logs')
+      .maybeSingle()
+
+    if (!error && data && Array.isArray(data.data)) {
+      return (data.data as NotificationLogEntry[]).slice(0, limit)
+    }
+  } catch (err) {
+    // Supabase fallback to local
+  }
+
+  const local = await readLocalSettings()
+  if (Array.isArray(local.notification_logs)) {
+    return local.notification_logs.slice(0, limit)
+  }
+
+  return []
+}
+
+export async function addNotificationLog(
+  entry: Omit<NotificationLogEntry, 'id' | 'timestamp' | 'formatted_time'>
+): Promise<NotificationLogEntry> {
+  const now = new Date()
+  const bkkTime = new Intl.DateTimeFormat('th-TH', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(now)
+
+  const newLog: NotificationLogEntry = {
+    id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: now.toISOString(),
+    formatted_time: bkkTime,
+    ...entry,
+  }
+
+  // 1. Save to local fallback first
+  const current = await readLocalSettings()
+  const currentLogs: NotificationLogEntry[] = Array.isArray(current.notification_logs)
+    ? current.notification_logs
+    : []
+  const updatedLogs = [newLog, ...currentLogs].slice(0, 50)
+  current.notification_logs = updatedLogs
+  await writeLocalSettings(current)
+
+  // 2. Save to Supabase settings table
+  try {
+    const supabase = createServiceClient()
+    await supabase
+      .from('settings')
+      .upsert({
+        id: 'notification_logs',
+        data: updatedLogs,
+        updated_at: now.toISOString(),
+      })
+  } catch (err) {
+    console.warn('[settings-store] Supabase upsert notification_logs error:', err)
+  }
+
+  return newLog
+}
+
+export async function clearNotificationLogs(): Promise<void> {
+  const current = await readLocalSettings()
+  current.notification_logs = []
+  await writeLocalSettings(current)
+
+  try {
+    const supabase = createServiceClient()
+    await supabase
+      .from('settings')
+      .upsert({
+        id: 'notification_logs',
+        data: [],
+        updated_at: new Date().toISOString(),
+      })
+  } catch (err) {
+    console.warn('[settings-store] Supabase clear notification_logs error:', err)
+  }
 }
 
 
